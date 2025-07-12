@@ -1,1060 +1,1042 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>אלבניה דפרסיה - מדריך הטיול שלך</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- React & ReactDOM CDNs -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel CDN for JSX transformation in browser (for development/simple deployment only) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-// Helper function to convert miles to kilometers
-const milesToKm = (miles) => (miles * 1.60934).toFixed(1);
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="root"></div>
 
-// Helper functions for localStorage
-const loadFromLocalStorage = (key, defaultValue) => {
-  try {
-    const serializedState = localStorage.getItem(key);
-    if (serializedState === null) {
-      return defaultValue;
-    }
-    return JSON.parse(serializedState);
-  } catch (error) {
-    console.error("Error loading from localStorage:", error);
-    return defaultValue;
-  }
-};
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
 
-const saveToLocalStorage = (key, state) => {
-  try {
-    const serializedState = JSON.stringify(state);
-    localStorage.setItem(key, serializedState);
-  } catch (error) {
-    console.error("Error saving to localStorage:", error);
-  }
-};
+        // Helper function to convert miles to kilometers
+        const milesToKm = (miles) => (miles * 1.60934).toFixed(1);
 
-// Data for the trip - extracted from the PDF
-const tripData = {
-  title: "אלבניה דפרסיה",
-  dates: "28 באוגוסט - 7 בספטמבר",
-  flights: [
-    {
-      id: "flight1",
-      type: "טיסה",
-      route: "תל אביב-יפו (TLV) → טירנה (TIA)",
-      date: "יום חמישי, 28 באוגוסט",
-      time: "13:00 - 14:55",
-      airline: "EL AL LY 5483",
-      cost: 683.00,
-      currency: "ILS"
-    },
-    {
-      id: "flight2",
-      type: "טיסה",
-      route: "טירנה (TIA) → תל אביב-יפו (TLV)",
-      date: "יום ראשון, 7 בספטמבר",
-      time: "15:35 - 19:10",
-      airline: "EL AL LY 5484",
-      cost: 683.00,
-      currency: "ILS"
-    }
-  ],
-  lodging: [
-    {
-      id: "lodging1",
-      name: "Rruga Edith Durham 25",
-      address: "Rruga Edith Durham 25, Shkodër 4001, Albania",
-      dates: "28-29 באוגוסט",
-      confirmation: "HM8TMAKB43",
-      contact: "https://wa.me/355694552255",
-      cost: 136.00,
-      currency: "ILS",
-      type: "דירה"
-    },
-    {
-      id: "lodging2",
-      name: "North Alpine Villas",
-      address: "9MXH+63, Bogë, Albania",
-      dates: "29-31 באוגוסט",
-      confirmation: "HMR3XMBREA",
-      contact: "https://wa.me/355699955869",
-      cost: 1179.00,
-      currency: "ILS",
-      type: "וילה"
-    },
-    {
-      id: "lodging3",
-      name: "8F6M+3CC",
-      address: "8F6M-3CC, Rruga Pavaresia 2002, Durrës 2002, Albania",
-      dates: "31 באוגוסט - 1 בספטמבר",
-      confirmation: "HMMFKKD2ZH",
-      contact: "https://wa.me/355696865066",
-      cost: 125.00,
-      currency: "ILS",
-      type: "דירה"
-    },
-    {
-      id: "lodging4",
-      name: "Hakuna Matata Residence & Apartments",
-      address: "KALAJA, Rr. Aleksander Moisiu, vis-a-vis plazhit, Vlorë 9405, Albania",
-      dates: "1-7 בספטמבר",
-      confirmation: "HM48PSE5EQ",
-      contact: "https://wa.me/355694884466",
-      cost: 1966.00,
-      currency: "ILS",
-      type: "דירה"
-    }
-  ],
-  carRental: {
-    id: "carRental1",
-    name: "Rent a Car in Tirana - VT Rentals",
-    pickup: {
-      date: "יום חמישי, 28 באוגוסט",
-      time: "15:15",
-      location: "Pallatet Agimi, Rruga Vaso Pasha, Tiranë 1001, Albania",
-    },
-    dropoff: {
-      date: "יום ראשון, 7 בספטמבר",
-      time: "13:00",
-      location: "Pallatet Agimi, Rruga Vaso Pasha, Tiranë 1001, Albania",
-    },
-    cost: 310.00,
-    currency: "EUR"
-  },
-  itinerary: [
-    {
-      date: "יום חמישי, 28 באוגוסט",
-      hebrewDate: "יום חמישי",
-      description: "יום בטיראנה, ערב בשקודרה",
-      activities: [
-        { type: "mandatory", text: "טיסה מתל אביב-יפו לטירנה (EL AL LY 5483)", time: "13:00 - 14:55", notes: "" },
-        { type: "mandatory", text: "איסוף רכב שכור בטירנה (VT Rentals)", time: "15:15", notes: "" },
-        { type: "mandatory", text: `נסיעה לשקודרה (${milesToKm(61.3)} ק"מ, כ-1 ש' 49 דק')`, notes: "" },
-        { type: "mandatory", text: "צ'ק-אין בדירה ב-Rruga Edith Durham 25, שקודרה", notes: "" },
-      ],
-      lodgingId: "lodging1"
-    },
-    {
-      date: "יום שישי, 29 באוגוסט",
-      hebrewDate: "יום שישי",
-      description: "הליכה + אומגה",
-      activities: [
-        { type: "mandatory", text: "צ'ק-אאוט מהדירה ב-Rruga Edith Durham 25", notes: "" },
-        { type: "mandatory", text: `נסיעה ל-North Alpine Villas, בוגה (${milesToKm(29.2)} ק"מ, כ-1 ש' 23 דק')`, notes: "" },
-        { type: "mandatory", text: "צ'ק-ין ב-North Alpine Villas", notes: "" },
-        { type: "mandatory", text: `Camping_Private Kabine(room) NORTH ALBANIA (כ-${milesToKm(15.7)} ק"מ, 48 דק') - לשים את האוכל במקרר`, notes: "" },
-        { type: "mandatory", text: `אומגה Thethi Zipline (כ-${milesToKm(1.8)} ק"מ, 12 דק')`, link: "https://www.google.com/maps/search/?api=1&query=Thethi+Zipline", notes: "אומגה מטורפת מעל קניון!" },
-        { type: "mandatory", text: `מסלול Thet Thet Khaing (כ-${milesToKm(10.7)} ק"מ, 39 דק') - <a href="https://www.wikiloc.com/hiking-trails/valle-de-theth-okol-y-ki-shtrazes-desde-theth-78816286/photo-51245713" target="_blank" rel="noopener noreferrer">פרטים נוספים</a>`, notes: "מסלול הליכה יפהפה בטבע." },
-        { type: "mandatory", text: `Buni i Bajraktarit (כ-${milesToKm(5.4)} ק"מ, 17 דק') - נוף ממש יפה ובדרך שלנו`, link: "https://www.google.com/maps/search/?api=1&query=Buni+i+Bajraktarit", notes: "נקודת תצפית מרהיבה." },
-        { type: "mandatory", text: "חזרה ל-North Alpine Villas", notes: "" },
-        { type: "mandatory", text: "כניסת שבת ב-18:50", notes: "" }
-      ],
-      lodgingId: "lodging2"
-    },
-    {
-      date: "יום שבת, 30 באוגוסט",
-      hebrewDate: "יום שבת",
-      description: "שבת באזור ת'ת",
-      activities: [
-        { type: "mandatory", text: "שהייה בדירה ב-North Alpine Villas", notes: "" }
-      ],
-      lodgingId: "lodging2"
-    },
-    {
-      date: "יום ראשון, 31 באוגוסט",
-      hebrewDate: "יום ראשון",
-      description: "אגם, רכבל, זיפליין",
-      activities: [
-        { type: "mandatory", text: "צ'ק-אאוט מ-North Alpine Villas", notes: "" },
-        { type: "mandatory", text: `נסיעה לדירה ב-8F6M+3CC, דורס (כ-${milesToKm(155)} ק"מ, 5 ש' 36 דק')`, notes: "" },
-        { type: "mandatory", text: `אגם בובילה (כ-${milesToKm(99.7)} ק"מ מ-North Alpine Villas, 3 ש' 43 דק') - <a href="https://www.wikiloc.com/hiking-trails/lake-bovilla-gamti-mountain-lake-bovilla-34432538" target="_blank" rel="noopener noreferrer">פרטים נוספים</a>`, notes: "אגם יפהפה עם אפשרות לטיול רגלי." },
-        { type: "mandatory", text: `רכבל דאיטי אקספרס (כ-${milesToKm(11)} ק"מ מאגם בובילה, 39 דק')`, link: "https://www.google.com/maps/search/?api=1&query=Dajti+Express", notes: "עליה ברכבל להר דאיטי עם נוף לטירנה." },
-        { type: "mandatory", text: `אומגה אלבניה (כ-${milesToKm(11.6)} ק"מ מדאיטי אקספרס, 23 דק')`, link: "https://www.google.com/maps/search/?api=1&query=Zipline+Albania", notes: "עוד אומגה כיפית!" },
-        { type: "mandatory", text: "צ'ק-אין בדירה ב-8F6M+3CC, דורס", notes: "" },
-      ],
-      lodgingId: "lodging3"
-    },
-    {
-      date: "יום שני, 1 בספטמבר",
-      hebrewDate: "יום שני",
-      description: "גשרים",
-      activities: [
-        { type: "mandatory", text: "צ'ק-אאוט מהדירה ב-8F6M+3CC", notes: "" },
-        { type: "mandatory", text: `נסיעה לדירה ב-Hakuna Matata Residence & Apartments, ולורה (כ-${milesToKm(140)} ק"מ, 4 ש' 10 דק')`, notes: "" },
-        { type: "mandatory", text: `גשר בראטאי (כ-${milesToKm(93.9)} ק"מ מ-8F6M+3CC, 2 ש' 21 דק')`, link: "https://www.google.com/maps/search/?api=1&query=Gorica+Bridge+Berat", notes: "גשר עתיק ויפה בבראט." },
-        { type: "mandatory", text: `גשר זברנץ (כ-${milesToKm(10.2)} ק"מ מ-Hakuna Matata, 24 דק')`, link: "https://www.google.com/maps/search/?api=1&query=Zvernec+Monastery", notes: "גשר עץ המוביל למנזר באי קטן." },
-        { type: "mandatory", text: "צ'ק-אין בדירה ב-Hakuna Matata Residence & Apartments, ולורה", notes: "" },
-      ],
-      lodgingId: "lodging4"
-    },
-    {
-      date: "יום שלישי, 2 בספטמבר",
-      hebrewDate: "יום שלישי",
-      description: "טיול גדול בולורה",
-      activities: [
-        { type: "mandatory", text: `טיול סירה עם TripMe.Today Boat Tour & Boat Trips Vlore (כ-${milesToKm(32)} ק"מ מ-Hakuna Matata, 7 דק') - <a href="https://www.tripme.today/en_GB/activity/298525/speedboat-ticket-for-grand-tour-national-park-grama-bay." target="_blank" rel="noopener noreferrer">פרטים נוספים</a>`, notes: "סיור ימי מומלץ במפרץ ולורה." },
-      ],
-      lodgingId: "lodging4"
-    },
-    {
-      date: "יום רביעי, 3 בספטמבר",
-      hebrewDate: "יום רביעי",
-      description: "עין כחולה, עיר נחמדה",
-      activities: [
-        { type: "mandatory", text: `נסיעה לג'ירוקסטרה (כ-${milesToKm(83.9)} ק"מ מ-Hakuna Matata, 2 ש' 3 דק')`, notes: `עיר אבן יפהפייה, אתר מורשת עולמית של אונסק"ו.` },
-        { type: "mandatory", text: `ביקור ב'עין הכחולה' (The Blue Eye) (כ-${milesToKm(22.6)} ק"מ מג'ירוקסטרה, 1 ש' 12 דק')`, link: "https://www.google.com/maps/search/?api=1&query=Blue+Eye+Albania", notes: "מעיין מים צלולים בצבע כחול עמוק." },
-        { type: "mandatory", text: `חזרה לדירה ב-Hakuna Matata Residence & Apartments (כ-${milesToKm(110)} ק"מ, 3 ש' 11 דק')`, notes: "" },
-      ],
-      lodgingId: "lodging4"
-    },
-    {
-      date: "יום חמישי, 4 בספטמבר",
-      hebrewDate: "יום חמישי",
-      description: "אבובים ומרחצאות תרמיים",
-      activities: [
-        { type: "mandatory", text: `ביקור בנקודת תצפית קניון אוסומי (Osumi Canyon viewing point) (כ-${milesToKm(101)} ק"מ מ-Hakuna Matata, 2 ש' 39 דק') - <a href="https://www.getyourguide.com/corovoda-1185185/corovoda-osumi-canyon-raftingriver-tubing-tour-t681710/" target="_blank" rel="noopener noreferrer">פרטים נוספים</a>`, notes: "נוף עוצר נשימה של הקניון, אפשרות לרפטינג/אבובים." },
-        { type: "mandatory", text: `חזרה לדירה ב-Hakuna Matata Residence & Apartments (כ-${milesToKm(101)} ק"מ, 2 ש' 41 דק')`, notes: "" },
-      ],
-      lodgingId: "lodging4"
-    },
-    {
-      date: "יום שישי, 5 בספטמבר",
-      hebrewDate: "יום שישי",
-      description: "מקום שווה לשבת",
-      activities: [
-        { type: "mandatory", text: "שהייה בדירה ב-Hakuna Matata Residence & Apartments", notes: "" }
-      ],
-      lodgingId: "lodging4"
-    },
-    {
-      date: "יום שבת, 6 בספטמבר",
-      hebrewDate: "יום שבת",
-      description: "יום חופשי בולורה",
-      activities: [
-        { type: "mandatory", text: "שהייה בדירה ב-Hakuna Matata Residence & Apartments", notes: "" }
-      ],
-      lodgingId: "lodging4"
-    },
-    {
-      date: "יום ראשון, 7 בספטמבר",
-      hebrewDate: "יום ראשון",
-      description: "היום שחוזרים בו",
-      activities: [
-        { type: "mandatory", text: "צ'ק-אאוט מהדירה ב-Hakuna Matata Residence & Apartments", notes: "" },
-        { type: "mandatory", text: `נסיעה ל-VT Rentals בטירנה (כ-${milesToKm(102)} ק"מ, 2 ש' 12 דק')`, notes: "" },
-        { type: "mandatory", text: "החזרת רכב שכור בטירנה (13:00)", notes: "" },
-        { type: "mandatory", text: "טיסה מטירנה לתל אביב-יפו (EL AL LY 5484)", time: "15:35 - 19:10", notes: "" }
-      ],
-      lodgingId: null // No lodging this night
-    }
-  ],
-  generalOptionalActivities: {
-    shkoder: [
-      { text: "פארק אגם שקודרה", link: "https://www.google.com/maps/search/?api=1&query=Lake+Shkoder+National+Park", notes: "פארק יפהפה על גדות האגם." },
-      { text: "טירת רוזאפה", link: "https://www.google.com/maps/search/?api=1&query=Rozafa+Castle+Shkoder", notes: "טירה עתיקה עם נוף פנורמי." },
-      { text: "Shega e Eger", link: "https://www.google.com/maps/search/?api=1&query=Shega+Eger+Shkoder", notes: "מסעדה מקומית מומלצת בשקודרה." },
-      { text: "Goje Gaditese", link: "https://www.google.com/maps/search/?api=1&query=Goje+Gaditese+Shkoder", notes: "מקום חם וידידותי עם תפריט מגוון." },
-    ],
-    durres: [
-      { text: "קרויה (אם יזרום)", link: "https://www.google.com/maps/search/?api=1&query=Kruja+Castle", notes: "עיר היסטורית עם שוק וטירה." },
-      { text: "Grand Hotel - Beach Bar", link: "https://www.google.com/maps/search/?api=1&query=Albanian+Star+Hotel+Beach+Bar+Durres", notes: "בר חוף תוסס עם נוף לים." },
-    ],
-    vlore: [
-      { text: "Pescheria (מקום לקנות דגים טריים)", link: "https://www.google.com/maps/search/?api=1&query=Poseidon+fish+market+Vlora", notes: "שוק דגים מקומי וגריל עם דגים טריים." },
-      { text: "Maréa Supermarket (סופר)", link: "https://www.google.com/maps/search/?api=1&query=Marea+Supermarket+Vlore", notes: "סופרמרקט גדול עם מגוון מוצרים." },
-      { text: "Lime Lounge Cocktail Bar (בר מגניב אבל יקר, מרחק הליכה)", link: "https://www.google.com/maps/search/?api=1&query=Lime+Lounge+Cocktail+Bar+Vlore", notes: "בר קוקטיילים יוקרתי עם אווירה תוססת." },
-      { text: "ROOFTOP - Lounge Bar (בר במחיר סביר על הגג, מרחק הליכה)", link: "https://www.google.com/maps/search/?api=1&query=ROOFTOP+Lounge+Bar+Vlore", notes: "בר גג עם נוף פנורמי מרהיב." },
-      { text: "Xhino Beach Bar (מקום מגניב, צריך לנסוע)", link: "https://www.google.com/maps/search/?api=1&query=Xhino+Beach+Bar+Vlore", notes: "בר חוף תוסס עם נוף שקיעה מהמם." },
-      { text: "Komiteti Bar - Vlorë (זול וחמוד, צריך לנסוע)", link: "https://www.google.com/maps/search/?api=1&query=Komiteti+Bar+Vlore", notes: "בר בוטיק זול וחמוד עם עיצוב מיוחד." },
-      { text: "Black Moon Lounge (מחירים סבירים)", link: "https://www.google.com/maps/search/?api=1&query=Black+Moon+Lounge+Vlore", notes: "לאונג' בר עם מוזיקה טובה ומחירים סבירים." },
-      { text: "Olympia Bar Vlorë (מקום מגניב, מחירים סבירים)", link: "https://www.google.com/maps/search/?api=1&query=Olympia+Bar+Vlore", notes: "בר פופולרי עם אווירה תוססת." },
-      { text: "Kuzum Baba (מקום יפה לראות ממנו את השקיעה)", link: "https://www.google.com/maps/search/?api=1&query=Kuzum+Baba+Vlore", notes: "נקודת תצפית מושלמת לשקיעה." },
-      { text: "Lungomare beach (טיילת)", link: "https://www.google.com/maps/search/?api=1&query=Lungomare+Vlore", notes: "טיילת חוף ארוכה ונעימה." },
-    ],
-    gjirokaster: [
-      { text: "מרחצאות תרמיים Llixhat e Bënjës", link: "https://www.google.com/maps/search/?api=1&query=Llixhat+e+B%C3%ABnj%C3%ABs", notes: "מעיינות חמים טבעיים." },
-      { text: "טירת ג'ירוקסטרה", link: "https://www.google.com/maps/search/?api=1&query=Gjirokaster+Castle", notes: "טירה מרשימה המשקיפה על העיר." },
-      { text: "שוק ג'ירוקסטרה", link: "https://www.google.com/maps/search/?api=1&query=Gjirokaster+Old+Bazaar", notes: "שוק מקומי עתיק עם עבודות יד ומזכרות." },
-      { text: "גשר עלי פאשה", link: "https://www.google.com/maps/search/?api=1&query=Ali+Pasha+Bridge+Gjirokaster", notes: "גשר אבן עתיק." }
-    ],
-    beaches: [
-      { text: "חוף ג'יפה (לא חובה, כי החופים ליד הדירה גם יפים)", link: "https://www.google.com/maps/search/?api=1&query=Gjipe+Beach", notes: "חוף מבודד ויפהפה." },
-      { text: "Dhërmiu Beach", link: "https://www.google.com/maps/search/?api=1&query=Dhermiu+Beach", notes: "אחד החופים הפופולריים בריביירה האלבנית." },
-      { text: "Plazhi Ksamilit (רחוק)", link: "https://www.google.com/maps/search/?api=1&query=Ksamil+Beach", notes: "חופים טרופיים עם איים קטנים." },
-      { text: "Jale Beach (ספורט ימי)", link: "https://www.google.com/maps/search/?api=1&query=Jale+Beach", notes: "חוף עם אפשרויות לספורט ימי." },
-    ],
-    tirana: [
-      { text: `מסלול טיול בטירנה: Maja e Tujanit - <a href="https://www.alltrails.com/trail/albania/tirana/maja-e-tujanit" target="_blank" rel="noopener noreferrer">פרטים נוספים</a>`, notes: "מסלול טיול בהר ליד טירנה." },
-      { text: `מסלול טיול בטירנה: WalkableCrossroad - סביב אגם טירנה - <a href="https://www.alltrails.com/trail/albania/durres/ligeni-i-tiranes" target="_blank" rel="noopener noreferrer">פרטים נוספים</a>`, notes: "הליכה נעימה סביב אגם טירנה." }
-    ]
-  },
-  packingList: {
-    clothing: ["בגדי טיול", "נעלי הליכה", "ג'קט", "כובע", "משקפי שמש", "בגד ים"],
-    toiletries: ["מברשת שיניים", "מטען", "אוזניות", "מינוקסידיל", "שעון"],
-    food: ["פיצה קפואה", "גבינה צהובה", "תבלינים", "פנקייק אינסטנט", "חטיפים", "בורקס"],
-    cooking: ["מחבת", "סיר", "סכו\"ם", "קערה"],
-    miscellaneous: ["תפילין", "דרכון", "רישיון נהיגה (ובינלאומי)", "כרטיס אשראי"]
-  },
-  budget: {
-    totalBudgetILS: 10000.00,
-    expenses: [
-      { category: "טיסות", item: "אל על 5483", amount: 683.00, currency: "ILS" },
-      { category: "טיסות", item: "אל על 5484", amount: 683.00, currency: "ILS" },
-      { category: "לינה", item: "Rruga Edith Durham 25", amount: 136.00, currency: "ILS" },
-      { category: "לינה", item: "North Alpine Villas", amount: 1179.00, currency: "ILS" },
-      { category: "לינה", item: "8F6M+3CC", amount: 125.00, currency: "ILS" },
-      { category: "לינה", item: "Hakuna Matata Residence & Apartments", amount: 1966.00, currency: "ILS" },
-      { category: "פעילויות", item: "Osumi Canyon viewing point", amount: 80.00, currency: "EUR" },
-      { category: "פעילויות", item: "TripMe.Today Boat Tour & Boat Trips Vlore", amount: 110.00, currency: "EUR" },
-      { category: "פעילויות", item: "Dajti Ekspres", amount: 28.00, currency: "EUR" },
-      { category: "פעילויות", item: "Zipline Albania", amount: 2000.00, currency: "ALL" },
-      { category: "פעילויות", item: "Thethi Zipline", amount: 2000.00, currency: "ALL" },
-      { category: "רכב שכור", item: "Rent a Car in Tirana - VT Rentals", amount: 310.00, currency: "EUR" },
-      { category: "אחר", item: "Camping_Private Kabine (room) NORTH ALBANIA", amount: 10.00, currency: "EUR" }
-    ]
-  }
-};
+        // Helper functions for localStorage
+        const loadFromLocalStorage = (key, defaultValue) => {
+            try {
+                const serializedState = localStorage.getItem(key);
+                if (serializedState === null) {
+                    return defaultValue;
+                }
+                return JSON.parse(serializedState);
+            } catch (error) {
+                console.error("Error loading from localStorage:", error);
+                return defaultValue;
+            }
+        };
 
-// Exchange rates (approximate for demonstration)
-const exchangeRates = {
-  EUR_TO_ILS: 4.0, // 1 EUR = 4.0 ILS
-  ALL_TO_ILS: 0.038 // 1 ALL = 0.038 ILS
-};
+        const saveToLocalStorage = (key, state) => {
+            try {
+                const serializedState = JSON.stringify(state);
+                localStorage.setItem(key, serializedState);
+            } catch (error) {
+                console.error("Error saving to localStorage:", error);
+            }
+        };
 
-// Function to convert to ILS
-const convertToILS = (amount, currency) => {
-  if (currency === "ILS") return amount;
-  if (currency === "EUR") return amount * exchangeRates.EUR_TO_ILS;
-  if (currency === "ALL") return amount * exchangeRates.ALL_TO_ILS;
-  return 0; // Should not happen
-};
+        // Data for the trip - extracted from the PDF
+        const tripData = {
+          title: "אלבניה דפרסיה",
+          dates: "28 באוגוסט - 7 בספטמבר",
+          flights: [
+            {
+              id: "flight1",
+              type: "טיסה",
+              route: "תל אביב-יפו (TLV) → טירנה (TIA)",
+              date: "יום חמישי, 28 באוגוסט",
+              time: "13:00 - 14:55",
+              airline: "EL AL LY 5483",
+              cost: 683.00,
+              currency: "ILS"
+            },
+            {
+              id: "flight2",
+              type: "טיסה",
+              route: "טירנה (TIA) → תל אביב-יפו (TLV)",
+              date: "יום ראשון, 7 בספטמבר",
+              time: "15:35 - 19:10",
+              airline: "EL AL LY 5484",
+              cost: 683.00,
+              currency: "ILS"
+            }
+          ],
+          lodging: [
+            {
+              id: "lodging1",
+              name: "Rruga Edith Durham 25",
+              address: "Rruga Edith Durham 25, Shkodër 4001, Albania",
+              dates: "28-29 באוגוסט",
+              confirmation: "HM8TMAKB43",
+              contact: "https://wa.me/355694552255",
+              cost: 136.00,
+              currency: "ILS",
+              type: "דירה"
+            },
+            {
+              id: "lodging2",
+              name: "North Alpine Villas",
+              address: "9MXH+63, Bogë, Albania",
+              dates: "29-31 באוגוסט",
+              confirmation: "HMR3XMBREA",
+              contact: "https://wa.me/355699955869",
+              cost: 1179.00,
+              currency: "ILS",
+              type: "וילה"
+            },
+            {
+              id: "lodging3",
+              name: "8F6M+3CC",
+              address: "8F6M-3CC, Rruga Pavaresia 2002, Durrës 2002, Albania",
+              dates: "31 באוגוסט - 1 בספטמבר",
+              confirmation: "HMMFKKD2ZH",
+              contact: "https://wa.me/355696865066",
+              cost: 125.00,
+              currency: "ILS",
+              type: "דירה"
+            },
+            {
+              id: "lodging4",
+              name: "Hakuna Matata Residence & Apartments",
+              address: "KALAJA, Rr. Aleksander Moisiu, vis-a-vis plazhit, Vlorë 9405, Albania",
+              dates: "1-7 בספטמבר",
+              confirmation: "HM48PSE5EQ",
+              contact: "https://wa.me/355694884466",
+              cost: 1966.00,
+              currency: "ILS",
+              type: "דירה"
+            }
+          ],
+          carRental: {
+            id: "carRental1",
+            name: "Rent a Car in Tirana - VT Rentals",
+            pickup: {
+              date: "יום חמישי, 28 באוגוסט",
+              time: "15:15",
+              location: "Pallatet Agimi, Rruga Vaso Pasha, Tiranë 1001, Albania",
+            },
+            dropoff: {
+              date: "יום ראשון, 7 בספטמבר",
+              time: "13:00",
+              location: "Pallatet Agimi, Rruga Vaso Pasha, Tiranë 1001, Albania",
+            },
+            cost: 310.00,
+            currency: "EUR"
+          },
+          itinerary: [
+            {
+              date: "יום חמישי, 28 באוגוסט",
+              hebrewDate: "יום חמישי",
+              description: "יום בטיראנה, ערב בשקודרה",
+              activities: [
+                { type: "mandatory", text: "טיסה מתל אביב-יפו לטירנה (EL AL LY 5483)", time: "13:00 - 14:55", notes: "" },
+                { type: "mandatory", text: "איסוף רכב שכור בטירנה (VT Rentals)", time: "15:15", notes: "" },
+                { type: "mandatory", text: `נסיעה לשקודרה (${milesToKm(61.3)} ק"מ, כ-1 ש' 49 דק')`, notes: "" },
+                { type: "mandatory", text: "צ'ק-אין בדירה ב-Rruga Edith Durham 25, שקודרה", notes: "" },
+              ],
+              lodgingId: "lodging1"
+            },
+            {
+              date: "יום שישי, 29 באוגוסט",
+              hebrewDate: "יום שישי",
+              description: "הליכה + אומגה",
+              activities: [
+                { type: "mandatory", text: "צ'ק-אאוט מהדירה ב-Rruga Edith Durham 25", notes: "" },
+                { type: "mandatory", text: `נסיעה ל-North Alpine Villas, בוגה (${milesToKm(29.2)} ק"מ, כ-1 ש' 23 דק')`, notes: "" },
+                { type: "mandatory", text: "צ'ק-ין ב-North Alpine Villas", notes: "" },
+                { type: "mandatory", text: `Camping_Private Kabine(room) NORTH ALBANIA (כ-${milesToKm(15.7)} ק"מ, 48 דק') - לשים את האוכל במקרר`, notes: "" },
+                { type: "mandatory", text: `אומגה Thethi Zipline (כ-${milesToKm(1.8)} ק"מ, 12 דק')`, link: "https://www.google.com/maps/search/?api=1&query=Thethi+Zipline", notes: "אומגה מטורפת מעל קניון!" },
+                { type: "mandatory", text: `מסלול Thet Thet Khaing (כ-${milesToKm(10.7)} ק"מ, 39 דק') - <a href="https://www.wikiloc.com/hiking-trails/valle-de-theth-okol-y-ki-shtrazes-desde-theth-78816286/photo-51245713" target="_blank" rel="noopener noreferrer">פרטים נוספים</a>`, notes: "מסלול הליכה יפהפה בטבע." },
+                { type: "mandatory", text: `Buni i Bajraktarit (כ-${milesToKm(5.4)} ק"מ, 17 דק') - נוף ממש יפה ובדרך שלנו`, link: "https://www.google.com/maps/search/?api=1&query=Buni+i+Bajraktarit", notes: "נקודת תצפית מרהיבה." },
+                { type: "mandatory", text: "חזרה ל-North Alpine Villas", notes: "" },
+                { type: "mandatory", text: "כניסת שבת ב-18:50", notes: "" }
+              ],
+              lodgingId: "lodging2"
+            },
+            {
+              date: "יום שבת, 30 באוגוסט",
+              hebrewDate: "יום שבת",
+              description: "שבת באזור ת'ת",
+              activities: [
+                { type: "mandatory", text: "שהייה בדירה ב-North Alpine Villas", notes: "" }
+              ],
+              lodgingId: "lodging2"
+            },
+            {
+              date: "יום ראשון, 31 באוגוסט",
+              hebrewDate: "יום ראשון",
+              description: "אגם, רכבל, זיפליין",
+              activities: [
+                { type: "mandatory", text: "צ'ק-אאוט מ-North Alpine Villas", notes: "" },
+                { type: "mandatory", text: `נסיעה לדירה ב-8F6M+3CC, דורס (כ-${milesToKm(155)} ק"מ, 5 ש' 36 דק')`, notes: "" },
+                { type: "mandatory", text: `אגם בובילה (כ-${milesToKm(99.7)} ק"מ מ-North Alpine Villas, 3 ש' 43 דק') - <a href="https://www.wikiloc.com/hiking-trails/lake-bovilla-gamti-mountain-lake-bovilla-34432538" target="_blank" rel="noopener noreferrer">פרטים נוספים</a>`, link: "https://www.google.com/maps/search/?api=1&query=Lake+Bovilla", notes: "אגם יפהפה עם אפשרות לטיול רגלי." },
+                { type: "mandatory", text: `רכבל דאיטי אקספרס (כ-${milesToKm(11)} ק"מ מאגם בובילה, 39 דק')`, link: "https://www.google.com/maps/search/?api=1&query=Dajti+Express", notes: "עליה ברכבל להר דאיטי עם נוף לטירנה." },
+                { type: "mandatory", text: `אומגה אלבניה (כ-${milesToKm(11.6)} ק"מ מדאיטי אקספרס, 23 דק')`, link: "https://www.google.com/maps/search/?api=1&query=Zipline+Albania", notes: "עוד אומגה כיפית!" },
+                { type: "mandatory", text: "צ'ק-אין בדירה ב-8F6M+3CC, דורס", notes: "" },
+              ],
+              lodgingId: "lodging3"
+            },
+            {
+              date: "יום שני, 1 בספטמבר",
+              hebrewDate: "יום שני",
+              description: "גשרים",
+              activities: [
+                { type: "mandatory", text: "צ'ק-אאוט מהדירה ב-8F6M+3CC", notes: "" },
+                { type: "mandatory", text: `נסיעה לדירה ב-Hakuna Matata Residence & Apartments, ולורה (כ-${milesToKm(140)} ק"מ, 4 ש' 10 דק')`, notes: "" },
+                { type: "mandatory", text: `גשר בראטאי (כ-${milesToKm(93.9)} ק"מ מ-8F6M+3CC, 2 ש' 21 דק')`, link: "https://www.google.com/maps/search/?api=1&query=Gorica+Bridge+Berat", notes: "גשר עתיק ויפה בבראט." },
+                { type: "mandatory", text: `גשר זברנץ (כ-${milesToKm(10.2)} ק"מ מ-Hakuna Matata, 24 דק')`, link: "https://www.google.com/maps/search/?api=1&query=Zvernec+Monastery", notes: "גשר עץ המוביל למנזר באי קטן." },
+                { type: "mandatory", text: "צ'ק-אין בדירה ב-Hakuna Matata Residence & Apartments, ולורה", notes: "" },
+              ],
+              lodgingId: "lodging4"
+            },
+            {
+              date: "יום שלישי, 2 בספטמבר",
+              hebrewDate: "יום שלישי",
+              description: "טיול גדול בולורה",
+              activities: [
+                { type: "mandatory", text: `טיול סירה עם TripMe.Today Boat Tour & Boat Trips Vlore (כ-${milesToKm(32)} ק"מ מ-Hakuna Matata, 7 דק') - <a href="https://www.tripme.today/en_GB/activity/298525/speedboat-ticket-for-grand-tour-national-park-grama-bay." target="_blank" rel="noopener noreferrer">פרטים נוספים</a>`, notes: "סיור ימי מומלץ במפרץ ולורה." },
+              ],
+              lodgingId: "lodging4"
+            },
+            {
+              date: "יום רביעי, 3 בספטמבר",
+              hebrewDate: "יום רביעי",
+              description: "עין כחולה, עיר נחמדה",
+              activities: [
+                { type: "mandatory", text: `נסיעה לג'ירוקסטרה (כ-${milesToKm(83.9)} ק"מ מ-Hakuna Matata, 2 ש' 3 דק')`, notes: `עיר אבן יפהפייה, אתר מורשת עולמית של אונסק"ו.` },
+                { type: "mandatory", text: `ביקור ב'עין הכחולה' (The Blue Eye) (כ-${milesToKm(22.6)} ק"מ מג'ירוקסטרה, 1 ש' 12 דק')`, link: "https://www.google.com/maps/search/?api=1&query=Blue+Eye+Albania", notes: "מעיין מים צלולים בצבע כחול עמוק." },
+                { type: "mandatory", text: `חזרה לדירה ב-Hakuna Matata Residence & Apartments (כ-${milesToKm(110)} ק"מ, 3 ש' 11 דק')`, notes: "" },
+              ],
+              lodgingId: "lodging4"
+            },
+            {
+              date: "יום חמישי, 4 בספטמבר",
+              hebrewDate: "יום חמישי",
+              description: "אבובים ומרחצאות תרמיים",
+              activities: [
+                { type: "mandatory", text: `ביקור בנקודת תצפית קניון אוסומי (Osumi Canyon viewing point) (כ-${milesToKm(101)} ק"מ מ-Hakuna Matata, 2 ש' 39 דק') - <a href="https://www.getyourguide.com/corovoda-1185185/corovoda-osumi-canyon-raftingriver-tubing-tour-t681710/" target="_blank" rel="noopener noreferrer">פרטים נוספים</a>`, notes: "נוף עוצר נשימה של הקניון, אפשרות לרפטינג/אבובים." },
+                { type: "mandatory", text: `חזרה לדירה ב-Hakuna Matata Residence & Apartments (כ-${milesToKm(101)} ק"מ, 2 ש' 41 דק')`, notes: "" },
+              ],
+              lodgingId: "lodging4"
+            },
+            {
+              date: "יום שישי, 5 בספטמבר",
+              hebrewDate: "יום שישי",
+              description: "מקום שווה לשבת",
+              activities: [
+                { type: "mandatory", text: "שהייה בדירה ב-Hakuna Matata Residence & Apartments", notes: "" }
+              ],
+              lodgingId: "lodging4"
+            },
+            {
+              date: "יום שבת, 6 בספטמבר",
+              hebrewDate: "יום שבת",
+              description: "יום חופשי בולורה",
+              activities: [
+                { type: "mandatory", text: "שהייה בדירה ב-Hakuna Matata Residence & Apartments", notes: "" }
+              ],
+              lodgingId: "lodging4"
+            },
+            {
+              date: "יום ראשון, 7 בספטמבר",
+              hebrewDate: "יום ראשון",
+              description: "היום שחוזרים בו",
+              activities: [
+                { type: "mandatory", text: "צ'ק-אאוט מהדירה ב-Hakuna Matata Residence & Apartments", notes: "" },
+                { type: "mandatory", text: `נסיעה ל-VT Rentals בטירנה (כ-${milesToKm(102)} ק"מ, 2 ש' 12 דק')`, notes: "" },
+                { type: "mandatory", text: "החזרת רכב שכור בטירנה (13:00)", notes: "" },
+                { type: "mandatory", text: "טיסה מטירנה לתל אביב-יפו (EL AL LY 5484)", time: "15:35 - 19:10", notes: "" }
+              ],
+              lodgingId: null // No lodging this night
+            }
+          ],
+          generalOptionalActivities: {
+            shkoder: [
+              { text: "פארק אגם שקודרה", link: "https://www.google.com/maps/search/?api=1&query=Lake+Shkoder+National+Park", notes: "פארק יפהפה על גדות האגם." },
+              { text: "טירת רוזאפה", link: "https://www.google.com/maps/search/?api=1&query=Rozafa+Castle+Shkoder", notes: "טירה עתיקה עם נוף פנורמי." },
+              { text: "Shega e Eger", link: "https://www.google.com/maps/search/?api=1&query=Shega+Eger+Shkoder", notes: "מסעדה מקומית מומלצת בשקודרה." },
+              { text: "Goje Gaditese", link: "https://www.google.com/maps/search/?api=1&query=Goje+Gaditese+Shkoder", notes: "מקום חם וידידותי עם תפריט מגוון." },
+            ],
+            durres: [
+              { text: "קרויה (אם יזרום)", link: "https://www.google.com/maps/search/?api=1&query=Kruja+Castle", notes: "עיר היסטורית עם שוק וטירה." },
+              { text: "Grand Hotel - Beach Bar", link: "https://www.google.com/maps/search/?api=1&query=Albanian+Star+Hotel+Beach+Bar+Durres", notes: "בר חוף תוסס עם נוף לים." },
+            ],
+            vlore: [
+              { text: "Pescheria (מקום לקנות דגים טריים)", link: "https://www.google.com/maps/search/?api=1&query=Poseidon+fish+market+Vlora", notes: "שוק דגים מקומי וגריל עם דגים טריים." },
+              { text: "Maréa Supermarket (סופר)", link: "https://www.google.com/maps/search/?api=1&query=Marea+Supermarket+Vlore", notes: "סופרמרקט גדול עם מגוון מוצרים." },
+              { text: "Lime Lounge Cocktail Bar (בר מגניב אבל יקר, מרחק הליכה)", link: "https://www.google.com/maps/search/?api=1&query=Lime+Lounge+Cocktail+Bar+Vlore", notes: "בר קוקטיילים יוקרתי עם אווירה תוססת." },
+              { text: "ROOFTOP - Lounge Bar (בר במחיר סביר על הגג, מרחק הליכה)", link: "https://www.google.com/maps/search/?api=1&query=ROOFTOP+Lounge+Bar+Vlore", notes: "בר גג עם נוף פנורמי מרהיב." },
+              { text: "Xhino Beach Bar (מקום מגניב, צריך לנסוע)", link: "https://www.google.com/maps/search/?api=1&query=Xhino+Beach+Bar+Vlore", notes: "בר חוף תוסס עם נוף שקיעה מהמם." },
+              { text: "Komiteti Bar - Vlorë (זול וחמוד, צריך לנסוע)", link: "https://www.google.com/maps/search/?api=1&query=Komiteti+Bar+Vlore", notes: "בר בוטיק זול וחמוד עם עיצוב מיוחד." },
+              { text: "Black Moon Lounge (מחירים סבירים)", link: "https://www.google.com/maps/search/?api=1&query=Black+Moon+Lounge+Vlore", notes: "לאונג' בר עם מוזיקה טובה ומחירים סבירים." },
+              { text: "Olympia Bar Vlorë (מקום מגניב, מחירים סבירים)", link: "https://www.google.com/maps/search/?api=1&query=Olympia+Bar+Vlore", notes: "בר פופולרי עם אווירה תוססת." },
+              { text: "Kuzum Baba (מקום יפה לראות ממנו את השקיעה)", link: "https://www.google.com/maps/search/?api=1&query=Kuzum+Baba+Vlore", notes: "נקודת תצפית מושלמת לשקיעה." },
+              { text: "Lungomare beach (טיילת)", link: "https://www.google.com/maps/search/?api=1&query=Lungomare+Vlore", notes: "טיילת חוף ארוכה ונעימה." },
+            ],
+            gjirokaster: [
+              { text: "מרחצאות תרמיים Llixhat e Bënjës", link: "https://www.google.com/maps/search/?api=1&query=Llixhat+e+B%C3%ABnj%C3%ABs", notes: "מעיינות חמים טבעיים." },
+              { text: "טירת ג'ירוקסטרה", link: "https://www.google.com/maps/search/?api=1&query=Gjirokaster+Castle", notes: "טירה מרשימה המשקיפה על העיר." },
+              { text: "שוק ג'ירוקסטרה", link: "https://www.google.com/maps/search/?api=1&query=Gjirokaster+Old+Bazaar", notes: "שוק מקומי עתיק עם עבודות יד ומזכרות." },
+              { text: "גשר עלי פאשה", link: "https://www.google.com/maps/search/?api=1&query=Ali+Pasha+Bridge+Gjirokaster", notes: "גשר אבן עתיק." }
+            ],
+            beaches: [
+              { text: "חוף ג'יפה (לא חובה, כי החופים ליד הדירה גם יפים)", link: "https://www.google.com/maps/search/?api=1&query=Gjipe+Beach", notes: "חוף מבודד ויפהפה." },
+              { text: "Dhërmiu Beach", link: "https://www.google.com/maps/search/?api=1&query=Dhermiu+Beach", notes: "אחד החופים הפופולריים בריביירה האלבנית." },
+              { text: "Plazhi Ksamilit (רחוק)", link: "https://www.google.com/maps/search/?api=1&query=Ksamil+Beach", notes: "חופים טרופיים עם איים קטנים." },
+              { text: "Jale Beach (ספורט ימי)", link: "https://www.google.com/maps/search/?api=1&query=Jale+Beach", notes: "חוף עם אפשרויות לספורט ימי." },
+            ],
+            tirana: [
+              { text: `מסלול טיול בטירנה: Maja e Tujanit - <a href="https://www.alltrails.com/trail/albania/tirana/maja-e-tujanit" target="_blank" rel="noopener noreferrer">פרטים נוספים</a>`, notes: "מסלול טיול בהר ליד טירנה." },
+              { text: `מסלול טיול בטירנה: WalkableCrossroad - סביב אגם טירנה - <a href="https://www.alltrails.com/trail/albania/durres/ligeni-i-tiranes" target="_blank" rel="noopener noreferrer">פרטים נוספים</a>`, notes: "הליכה נעימה סביב אגם טירנה." }
+            ]
+          },
+          packingList: {
+            clothing: ["בגדי טיול", "נעלי הליכה", "ג'קט", "כובע", "משקפי שמש", "בגד ים"],
+            toiletries: ["מברשת שיניים", "מטען", "אוזניות", "מינוקסידיל", "שעון"],
+            food: ["פיצה קפואה", "גבינה צהובה", "תבלינים", "פנקייק אינסטנט", "חטיפים", "בורקס"],
+            cooking: ["מחבת", "סיר", "סכו\"ם", "קערה"],
+            miscellaneous: ["תפילין", "דרכון", "רישיון נהיגה (ובינלאומי)", "כרטיס אשראי"]
+          },
+          budget: {
+            totalBudgetILS: 10000.00,
+            expenses: [
+              { category: "טיסות", item: "אל על 5483", amount: 683.00, currency: "ILS" },
+              { category: "טיסות", item: "אל על 5484", amount: 683.00, currency: "ILS" },
+              { category: "לינה", item: "Rruga Edith Durham 25", amount: 136.00, currency: "ILS" },
+              { category: "לינה", item: "North Alpine Villas", amount: 1179.00, currency: "ILS" },
+              { category: "לינה", item: "8F6M+3CC", amount: 125.00, currency: "ILS" },
+              { category: "לינה", item: "Hakuna Matata Residence & Apartments", amount: 1966.00, currency: "ILS" },
+              { category: "פעילויות", item: "Osumi Canyon viewing point", amount: 80.00, currency: "EUR" },
+              { category: "פעילויות", item: "TripMe.Today Boat Tour & Boat Trips Vlore", amount: 110.00, currency: "EUR" },
+              { category: "פעילויות", item: "Dajti Ekspres", amount: 28.00, currency: "EUR" },
+              { category: "פעילויות", item: "Zipline Albania", amount: 2000.00, currency: "ALL" },
+              { category: "פעילויות", item: "Thethi Zipline", amount: 2000.00, currency: "ALL" },
+              { category: "רכב שכור", item: "Rent a Car in Tirana - VT Rentals", amount: 310.00, currency: "EUR" },
+              { category: "אחר", item: "Camping_Private Kabine (room) NORTH ALBANIA", amount: 10.00, currency: "EUR" }
+            ]
+          }
+        };
 
-// Hero Section Component
-const Hero = ({ title, dates }) => (
-  <section id="hero" className="relative h-screen flex items-center justify-center text-white rounded-xl shadow-lg"
-    // Changed to a green gradient background for a cohesive look
-    style={{ background: 'linear-gradient(to right, #16a34a 0%, #34d399 100%)' }}> {/* Using green-600 and green-400 */}
-    <div className="absolute inset-0 bg-black opacity-50 rounded-xl"></div>
-    <div className="relative z-10 text-center p-8 bg-black bg-opacity-40 rounded-xl">
-      <h1 className="text-6xl md:text-8xl font-extrabold mb-4 drop-shadow-lg text-yellow-300">{title}</h1>
-      <p className="text-2xl md:text-4xl font-semibold">{dates}</p>
-    </div>
-  </section>
-);
+        // Exchange rates (approximate for demonstration)
+        const exchangeRates = {
+          EUR_TO_ILS: 4.0, // 1 EUR = 4.0 ILS
+          ALL_TO_ILS: 0.038 // 1 ALL = 0.038 ILS
+        };
 
-// Navbar Component
-const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
+        // Function to convert to ILS
+        const convertToILS = (amount, currency) => {
+          if (currency === "ILS") return amount;
+          if (currency === "EUR") return amount * exchangeRates.EUR_TO_ILS;
+          if (currency === "ALL") return amount * exchangeRates.ALL_TO_ILS;
+          return 0; // Should not happen
+        };
 
-  const scrollToSection = (id) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-      setIsOpen(false); // Close mobile menu after clicking
-    }
-  };
+        // Hero Section Component
+        const Hero = ({ title, dates }) => (
+          <section id="hero" className="relative h-screen flex items-center justify-center text-white rounded-xl shadow-lg"
+            style={{ background: 'linear-gradient(to right, #16a34a 0%, #34d399 100%)' }}>
+            <div className="absolute inset-0 bg-black opacity-50 rounded-xl"></div>
+            <div className="relative z-10 text-center p-8 bg-black bg-opacity-40 rounded-xl">
+              <h1 className="text-6xl md:text-8xl font-extrabold mb-4 drop-shadow-lg text-yellow-300">{title}</h1>
+              <p className="text-2xl md:text-4xl font-semibold">{dates}</p>
+            </div>
+          </section>
+        );
 
-  return (
-    <nav className="sticky top-0 z-50 bg-gradient-to-r from-green-600 to-green-800 p-4 shadow-lg rounded-b-xl"> {/* Changed to green shades */}
-      <div className="container mx-auto flex justify-between items-center">
-        <div className="text-white text-2xl font-bold">
-          <a href="#hero" onClick={() => scrollToSection('hero')} className="hover:text-yellow-300 transition duration-300">הטיול שלי</a>
-        </div>
-        <div className="md:hidden">
-          <button onClick={() => setIsOpen(!isOpen)} className="text-white focus:outline-none">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              {isOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
-              )}
-            </svg>
-          </button>
-        </div>
-        <div className={`md:flex ${isOpen ? 'block' : 'hidden'} w-full md:w-auto`}>
-          <ul className="flex flex-col md:flex-row md:space-x-8 mt-4 md:mt-0 items-center">
-            {['itinerary', 'packing-list', 'budget', 'general-optional-activities', 'currency-converter'].map((id) => (
-              <li key={id}>
-                <a
-                  href={`#${id}`}
-                  onClick={() => scrollToSection(id)}
-                  className="block py-2 px-4 text-white hover:text-yellow-300 transition duration-300 text-lg font-medium rounded-lg"
-                >
-                  {id === 'itinerary' && 'מסלול הטיול'}
-                  {id === 'packing-list' && 'רשימת ציוד'}
-                  {id === 'budget' && 'תקציב'}
-                  {id === 'general-optional-activities' && 'פעילויות אופציונליות'}
-                  {id === 'currency-converter' && 'מחשבון מטבע'}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </nav>
-  );
-};
+        // Navbar Component
+        const Navbar = () => {
+          const [isOpen, setIsOpen] = useState(false);
 
-// Itinerary Section Component
-const Itinerary = ({ itinerary, lodging, carRental }) => {
-  const [openDay, setOpenDay] = useState(null); // State to manage which day's details are open
-  // State to manage temporary notes for activities, loaded from localStorage
-  const [activityNotes, setActivityNotes] = useState(() =>
-    loadFromLocalStorage('itineraryNotes', {})
-  );
+          const scrollToSection = (id) => {
+            const element = document.getElementById(id);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth' });
+              setIsOpen(false);
+            }
+          };
 
-  // State to manage temporary images for activities, loaded from localStorage
-  const [activityImages, setActivityImages] = useState(() =>
-    loadFromLocalStorage('itineraryImages', {})
-  );
-
-  // State to manage the collapsed/expanded state of notes/image sections within each activity
-  const [openActivityDetails, setOpenActivityDetails] = useState(() =>
-    loadFromLocalStorage('openActivityDetails', {})
-  );
-
-  // Save notes to localStorage whenever they change
-  useEffect(() => {
-    saveToLocalStorage('itineraryNotes', activityNotes);
-  }, [activityNotes]);
-
-  // Save images to localStorage whenever they change
-  useEffect(() => {
-    saveToLocalStorage('itineraryImages', activityImages);
-  }, [activityImages]);
-
-  // Save openActivityDetails state to localStorage whenever it changes
-  useEffect(() => {
-    saveToLocalStorage('openActivityDetails', openActivityDetails);
-  }, [openActivityDetails]);
-
-  const toggleDay = (index) => {
-    setOpenDay(openDay === index ? null : index);
-  };
-
-  const toggleActivityDetail = (dayIndex, activityIndex) => {
-    const key = `${dayIndex}-${activityIndex}`;
-    setOpenActivityDetails(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
-
-  const handleNoteChange = (dayIndex, activityIndex, e) => {
-    setActivityNotes(prevNotes => ({
-      ...prevNotes,
-      [`${dayIndex}-${activityIndex}`]: e.target.value
-    }));
-  };
-
-  const handleImageUpload = (dayIndex, activityIndex, e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setActivityImages(prevImages => ({
-          ...prevImages,
-          [`${dayIndex}-${activityIndex}`]: reader.result // Save base64 string
-        }));
-      };
-      reader.readAsDataURL(file); // Read file as base64
-    }
-  };
-
-  return (
-    <section id="itinerary" className="py-16 bg-gray-100 min-h-screen rounded-xl shadow-lg m-4">
-      <div className="container mx-auto px-4">
-        <h2 className="text-5xl font-bold text-center mb-12 text-green-700 drop-shadow-md"> {/* Changed to green-700 */}
-          <i className="lucide lucide-map-pin inline-block align-middle mr-4"></i>
-          מסלול הטיול
-        </h2>
-        <div className="space-y-8">
-          {itinerary.map((day, index) => {
-            const currentLodging = day.lodgingId ? lodging.find(l => l.id === day.lodgingId) : null;
-            const isCarPickupDay = day.date === carRental.pickup.date;
-            const isCarDropoffDay = day.date === carRental.dropoff.date;
-
-            return (
-              <div
-                key={index}
-                className="bg-white p-8 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer border-t-4 border-green-500" // Changed to green-500
-                onClick={() => toggleDay(index)}
-              >
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-3xl font-semibold text-gray-800 flex items-center">
-                    <span className="text-green-600 mr-3">📅</span> {/* Changed to green-600 */}
-                    {day.date}: {day.description}
-                  </h3>
-                  <button className="text-green-500 hover:text-green-700 transition-colors duration-300"> {/* Changed to green-500, green-700 */}
-                    {openDay === index ? (
-                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path></svg>
-                    ) : (
-                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                    )}
+          return (
+            <nav className="sticky top-0 z-50 bg-gradient-to-r from-green-600 to-green-800 p-4 shadow-lg rounded-b-xl">
+              <div className="container mx-auto flex justify-between items-center">
+                <div className="text-white text-2xl font-bold">
+                  <a href="#hero" onClick={() => scrollToSection('hero')} className="hover:text-yellow-300 transition duration-300">הטיול שלי</a>
+                </div>
+                <div className="md:hidden">
+                  <button onClick={() => setIsOpen(!isOpen)} className="text-white focus:outline-none">
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      {isOpen ? (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                      ) : (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                      )}
+                    </svg>
                   </button>
                 </div>
-
-                {openDay === index && (
-                  <div className="mt-6 border-t pt-6 border-gray-200">
-                    <ul className="space-y-4 text-lg text-gray-700">
-                      {isCarPickupDay && (
-                        <li className="flex items-start text-green-700 font-medium">
-                          <span className="text-2xl mr-3">🚗</span>
-                          <div>
-                            <strong>איסוף רכב:</strong> {carRental.name} ב-{carRental.pickup.location} בשעה {carRental.pickup.time}
-                          </div>
-                        </li>
-                      )}
-                      {isCarDropoffDay && (
-                        <li className="flex items-start text-red-700 font-medium">
-                          <span className="text-2xl mr-3">🚗</span>
-                          <div>
-                            <strong>החזרת רכב:</strong> {carRental.name} ב-{carRental.dropoff.location} בשעה {carRental.dropoff.time}
-                          </div>
-                        </li>
-                      )}
-                      {day.activities.map((activity, activityIdx) => {
-                        const activityDetailKey = `${index}-${activityIdx}`;
-                        const isDetailOpen = openActivityDetails[activityDetailKey];
-                        return (
-                          <li key={activityIdx} className={`flex flex-col items-start p-4 rounded-lg ${activity.type === 'optional' ? 'bg-gray-50 text-gray-500' : 'bg-green-50 text-gray-700'}`}> {/* Changed to green-50 */}
-                            <div className="flex items-center w-full mb-2">
-                              <span className="text-2xl mr-3">
-                                {activity.type === 'mandatory' ? '✅' : '💡'}
-                              </span>
-                              <div className="flex-grow" dangerouslySetInnerHTML={{ __html: activity.text }} />
-                              {activity.time && <span className="font-medium mr-2"> ({activity.time})</span>}
-                              {activity.type === 'optional' && <span className="text-sm ml-2">(אופציונלי)</span>}
-                            </div>
-                            {activity.link && (
-                              <a
-                                href={activity.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center px-4 py-2 bg-green-500 text-white text-sm font-semibold rounded-full hover:bg-green-600 transition-colors duration-300 shadow-md mt-2" // Changed to green shades
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-map-pin mr-2"><path d="M12 18.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M12 22v-3.5"/><path d="M12 11.5V2"/><path d="M19 12h3"/><path d="M2 12h3"/><path d="M12 2a7 7 0 1 0 7 7"/></svg>
-                                נווט
-                              </a>
-                            )}
-
-                            <div className="w-full mt-4 border-t border-gray-200 pt-4">
-                              <div
-                                className="flex justify-between items-center cursor-pointer"
-                                onClick={() => toggleActivityDetail(index, activityIdx)}
-                              >
-                                <h4 className="text-base font-medium text-gray-700 flex items-center">
-                                  <span className="text-xl mr-2">📝</span>
-                                  הערות ותמונות
-                                </h4>
-                                <button className="text-gray-500 hover:text-gray-700 transition-colors duration-300">
-                                  {isDetailOpen ? (
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path></svg>
-                                  ) : (
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                                  )}
-                                </button>
-                              </div>
-
-                              {isDetailOpen && (
-                                <div className="mt-4">
-                                  <label htmlFor={`notes-${index}-${activityIdx}`} className="block text-sm font-medium text-gray-700 mb-1">
-                                    הערות:
-                                  </label>
-                                  <textarea
-                                    id={`notes-${index}-${activityIdx}`}
-                                    value={activityNotes[`${index}-${activityIdx}`] || ''}
-                                    onChange={(e) => handleNoteChange(index, activityIdx, e)}
-                                    className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-green-500 focus:border-green-500" // Changed to green shades
-                                    rows="3"
-                                    placeholder="הערות לפעילות זו (נשמרות בדפדפן)"
-                                  ></textarea>
-                                  <p className="text-xs text-green-500 mt-1"> {/* Changed to green-500 */}
-                                    *הערות אלו נשמרות באופן מקומי בדפדפן.
-                                  </p>
-
-                                  <div className="mt-4">
-                                    <label htmlFor={`image-upload-${index}-${activityIdx}`} className="block text-sm font-medium text-gray-700 mb-1">
-                                      העלאת תמונה/קובץ:
-                                    </label>
-                                    <input
-                                      type="file"
-                                      id={`image-upload-${index}-${activityIdx}`}
-                                      accept="image/*"
-                                      onChange={(e) => handleImageUpload(index, activityIdx, e)}
-                                      className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100" // Changed to green shades
-                                    />
-                                    {activityImages[`${index}-${activityIdx}`] && (
-                                      <div className="mt-2">
-                                        <img
-                                          src={activityImages[`${index}-${activityIdx}`]}
-                                          alt="Uploaded preview"
-                                          className="mt-2 max-w-full h-auto rounded-lg shadow-md"
-                                          style={{ maxWidth: '200px' }}
-                                        />
-                                        <p className="text-xs text-green-500 mt-1"> {/* Changed to green-500 */}
-                                          *התמונה נשמרת באופן מקומי בדפדפן.
-                                        </p>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                    {currentLodging && (
-                      <div className="mt-8 p-6 bg-green-50 border border-green-200 rounded-xl shadow-inner"> {/* Changed to green shades */}
-                        <h4 className="text-2xl font-bold text-green-700 mb-4 flex items-center"> {/* Changed to green-700 */}
-                          <span className="text-3xl mr-3">🏨</span>
-                          לינה: {currentLodging.type} ב-{currentLodging.name}
-                        </h4>
-                        <p className="text-lg text-green-800 mb-2"> {/* Changed to green-800 */}
-                          <strong>כתובת:</strong> {currentLodging.address}
-                        </p>
-                        <p className="text-lg text-green-800 mb-2"> {/* Changed to green-800 */}
-                          <strong>תאריכים:</strong> {currentLodging.dates}
-                        </p>
-                        <p className="text-lg text-green-800 mb-2"> {/* Changed to green-800 */}
-                          <strong>אישור הזמנה:</strong> {currentLodging.confirmation}
-                        </p>
-                        {currentLodging.contact && (
-                          <a
-                            href={currentLodging.contact}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center text-green-600 hover:text-green-800 font-semibold transition-colors duration-300 mt-2" // Changed to green shades
-                          >
-                            <span className="text-xl mr-2">📞</span>
-                            צור קשר עם הדירה
-                          </a>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
+                <div className={`md:flex ${isOpen ? 'block' : 'hidden'} w-full md:w-auto`}>
+                  <ul className="flex flex-col md:flex-row md:space-x-8 mt-4 md:mt-0 items-center">
+                    {['itinerary', 'packing-list', 'budget', 'general-optional-activities', 'currency-converter'].map((id) => (
+                      <li key={id}>
+                        <a
+                          href={`#${id}`}
+                          onClick={() => scrollToSection(id)}
+                          className="block py-2 px-4 text-white hover:text-yellow-300 transition duration-300 text-lg font-medium rounded-lg"
+                        >
+                          {id === 'itinerary' && 'מסלול הטיול'}
+                          {id === 'packing-list' && 'רשימת ציוד'}
+                          {id === 'budget' && 'תקציב'}
+                          {id === 'general-optional-activities' && 'פעילויות אופציונליות'}
+                          {id === 'currency-converter' && 'מחשבון מטבע'}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-            );
-          })}
-        </div>
-      </div>
-    </section>
-  );
-};
+            </nav>
+          );
+        };
 
-// Packing List Section Component
-const PackingList = ({ packingList }) => (
-  <section id="packing-list" className="py-16 bg-gradient-to-br from-green-50 to-green-100 min-h-screen rounded-xl shadow-lg m-4"> {/* Changed to green-100 */}
-    <div className="container mx-auto px-4">
-      <h2 className="text-5xl font-bold text-center mb-12 text-green-700 drop-shadow-md">
-        <i className="lucide lucide-baggage-claim inline-block align-middle mr-4"></i>
-        רשימת ציוד
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {Object.entries(packingList).map(([category, items]) => (
-          <div key={category} className="bg-white p-8 rounded-2xl shadow-xl border-t-4 border-green-500">
-            <h3 className="text-3xl font-semibold text-gray-800 mb-6 capitalize flex items-center">
-              <span className="text-green-600 mr-3">
-                {category === 'clothing' && '👕'}
-                {category === 'toiletries' && '🧴'}
-                {category === 'food' && '🍎'}
-                {category === 'cooking' && '🍳'}
-                {category === 'miscellaneous' && '🎒'}
-              </span>
-              {category === 'clothing' && 'ביגוד'}
-              {category === 'toiletries' && 'טואלטיקה ואישי'}
-              {category === 'food' && 'פריטי מזון'}
-              {category === 'cooking' && 'כלי בישול'}
-              {category === 'miscellaneous' && 'שונות'}
-            </h3>
-            <ul className="space-y-3 text-lg text-gray-700">
-              {items.map((item, index) => (
-                <li key={index} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id={`item-${category}-${index}`}
-                    className="form-checkbox h-6 w-6 text-green-600 rounded-md border-gray-300 focus:ring-green-500"
-                  />
-                  <label htmlFor={`item-${category}-${index}`} className="ml-3 cursor-pointer">
-                    {item}
-                  </label>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-    </div>
-  </section>
-);
+        // Itinerary Section Component
+        const Itinerary = ({ itinerary, lodging, carRental }) => {
+          const [openDay, setOpenDay] = useState(null);
+          const [activityNotes, setActivityNotes] = useState(() =>
+            loadFromLocalStorage('itineraryNotes', {})
+          );
+          const [activityImages, setActivityImages] = useState(() =>
+            loadFromLocalStorage('itineraryImages', {})
+          );
+          const [openActivityDetails, setOpenActivityDetails] = useState(() =>
+            loadFromLocalStorage('openActivityDetails', {})
+          );
 
-// Budget Section Component
-const Budget = ({ budget }) => {
-  // Calculate total expenses in ILS and categorize them
-  const categorizedExpenses = {};
-  budget.expenses.forEach(exp => {
-    const amountILS = convertToILS(exp.amount, exp.currency);
-    categorizedExpenses[exp.category] = (categorizedExpenses[exp.category] || 0) + amountILS;
-  });
+          useEffect(() => {
+            saveToLocalStorage('itineraryNotes', activityNotes);
+          }, [activityNotes]);
 
-  const pieChartData = Object.entries(categorizedExpenses).map(([category, amount]) => ({
-    name: category,
-    value: parseFloat(amount.toFixed(2))
-  }));
+          useEffect(() => {
+            saveToLocalStorage('itineraryImages', activityImages);
+          }, [activityImages]);
 
-  const COLORS = ['#16a34a', '#34d399', '#84cc16', '#a3e635', '#4ade80', '#22c55e']; // Updated to green shades
+          useEffect(() => {
+            saveToLocalStorage('openActivityDetails', openActivityDetails);
+          }, [openActivityDetails]);
 
-  const totalActualExpenses = pieChartData.reduce((sum, entry) => sum + entry.value, 0);
+          const toggleDay = (index) => {
+            setOpenDay(openDay === index ? null : index);
+          };
 
-  return (
-    <section id="budget" className="py-16 bg-gray-100 min-h-screen rounded-xl shadow-lg m-4">
-      <div className="container mx-auto px-4">
-        <h2 className="text-5xl font-bold text-center mb-12 text-green-700 drop-shadow-md"> {/* Changed to green-700 */}
-          <i className="lucide lucide-wallet inline-block align-middle mr-4"></i>
-          תקציב הטיול
-        </h2>
-        <div className="bg-white p-8 rounded-2xl shadow-xl border-t-4 border-green-500"> {/* Changed to green-500 */}
-          <div className="flex flex-col md:flex-row items-center justify-around mb-8">
-            <div className="text-center p-4 bg-green-50 rounded-xl shadow-inner mb-4 md:mb-0 w-full md:w-1/3"> {/* Changed to green-50 */}
-              <h3 className="text-2xl font-semibold text-green-800">תקציב כולל</h3> {/* Changed to green-800 */}
-              <p className="text-4xl font-bold text-green-600">₪{budget.totalBudgetILS.toLocaleString()}</p> {/* Changed to green-600 */}
-            </div>
-            <div className="text-center p-4 bg-green-50 rounded-xl shadow-inner w-full md:w-1/3"> {/* Changed to green-50 */}
-              <h3 className="text-2xl font-semibold text-green-800">הוצאות בפועל</h3> {/* Changed to green-800 */}
-              <p className="text-4xl font-bold text-green-600">₪{totalActualExpenses.toLocaleString()}</p> {/* Changed to green-600 */}
-            </div>
-          </div>
+          const toggleActivityDetail = (dayIndex, activityIndex) => {
+            const key = `${dayIndex}-${activityIndex}`;
+            setOpenActivityDetails(prev => ({
+              ...prev,
+              [key]: !prev[key]
+            }));
+          };
 
-          <h3 className="text-3xl font-semibold text-gray-800 mb-6 text-center">התפלגות הוצאות</h3>
-          <ResponsiveContainer width="100%" height={400}>
-            <PieChart>
-              <Pie
-                data={pieChartData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                outerRadius={150}
-                fill="#8884d8"
-                dataKey="value"
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-              >
-                {pieChartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => `₪${value.toLocaleString()}`} />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    </section>
-  );
-};
+          const handleNoteChange = (dayIndex, activityIndex, e) => {
+            setActivityNotes(prevNotes => ({
+              ...prevNotes,
+              [`${dayIndex}-${activityIndex}`]: e.target.value
+            }));
+          };
 
-// General Optional Activities Section Component
-const GeneralOptionalActivities = ({ activities }) => {
-  // State to manage temporary images for optional activities, loaded from localStorage
-  const [optionalActivityImages, setOptionalActivityImages] = useState(() =>
-    loadFromLocalStorage('optionalActivityImages', {})
-  );
+          const handleImageUpload = (dayIndex, activityIndex, e) => {
+            const file = e.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                setActivityImages(prevImages => ({
+                  ...prevImages,
+                  [`${dayIndex}-${activityIndex}`]: reader.result
+                }));
+              };
+              reader.readAsDataURL(file);
+            }
+          };
 
-  // State to manage the collapsed/expanded state of each category
-  const [openCategories, setOpenCategories] = useState(() =>
-    loadFromLocalStorage('openCategories', {})
-  );
+          return (
+            <section id="itinerary" className="py-16 bg-gray-100 min-h-screen rounded-xl shadow-lg m-4">
+              <div className="container mx-auto px-4">
+                <h2 className="text-5xl font-bold text-center mb-12 text-green-700 drop-shadow-md">
+                  🗺️ מסלול הטיול
+                </h2>
+                <div className="space-y-8">
+                  {itinerary.map((day, index) => {
+                    const currentLodging = day.lodgingId ? lodging.find(l => l.id === day.lodgingId) : null;
+                    const isCarPickupDay = day.date === carRental.pickup.date;
+                    const isCarDropoffDay = day.date === carRental.dropoff.date;
 
-  // State to manage the collapsed/expanded state of notes/image sections within each optional activity
-  const [openOptionalActivityDetails, setOpenOptionalActivityDetails] = useState(() =>
-    loadFromLocalStorage('openOptionalActivityDetails', {})
-  );
-
-  // Save images to localStorage whenever they change
-  useEffect(() => {
-    saveToLocalStorage('optionalActivityImages', optionalActivityImages);
-  }, [optionalActivityImages]);
-
-  // Save openCategories state to localStorage whenever it changes
-  useEffect(() => {
-    saveToLocalStorage('openCategories', openCategories);
-  }, [openCategories]);
-
-  // Save openOptionalActivityDetails state to localStorage whenever it changes
-  useEffect(() => {
-    saveToLocalStorage('openOptionalActivityDetails', openOptionalActivityDetails);
-  }, [openOptionalActivityDetails]);
-
-  const handleOptionalImageUpload = (location, itemIndex, e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setOptionalActivityImages(prevImages => ({
-          ...prevImages,
-          [`${location}-${itemIndex}`]: reader.result // Save base64 string
-        }));
-      };
-      reader.readAsDataURL(file); // Read file as base64
-    }
-  };
-
-  const toggleCategory = (location) => {
-    setOpenCategories(prev => ({
-      ...prev,
-      [location]: !prev[location]
-    }));
-  };
-
-  const toggleOptionalActivityDetail = (location, itemIndex) => {
-    const key = `${location}-${itemIndex}`;
-    setOpenOptionalActivityDetails(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
-
-  return (
-    <section id="general-optional-activities" className="py-16 bg-gradient-to-br from-green-50 to-green-100 min-h-screen rounded-xl shadow-lg m-4"> {/* Changed to green-100 */}
-      <div className="container mx-auto px-4">
-        <h2 className="text-5xl font-bold text-center mb-12 text-green-700 drop-shadow-md"> {/* Changed to green-700 */}
-          <i className="lucide lucide-compass inline-block align-middle mr-4"></i>
-          פעילויות אופציונליות כלליות
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {Object.entries(activities).map(([location, items]) => (
-            <div key={location} className="bg-white p-8 rounded-2xl shadow-xl border-t-4 border-green-500"> {/* Changed to green-500 */}
-              <div
-                className="flex justify-between items-center mb-6 cursor-pointer"
-                onClick={() => toggleCategory(location)}
-              >
-                <h3 className="text-3xl font-semibold text-gray-800 capitalize flex items-center">
-                  <span className="text-green-600 mr-3">📍</span> {/* Changed to green-600 */}
-                  {location === 'shkoder' ? 'אזור שקודרה' : null}
-                  {location === 'durres' ? 'אזור דורס' : null}
-                  {location === 'vlore' ? 'אזור ולורה' : null}
-                  {location === 'gjirokaster' ? 'אזור ג\'ירוקסטרה' : null}
-                  {location === 'beaches' ? 'חופים מומלצים' : null}
-                  {location === 'tirana' ? 'אזור טירנה' : null}
-                </h3>
-                <button className="text-green-500 hover:text-green-700 transition-colors duration-300"> {/* Changed to green-500, green-700 */}
-                  {openCategories[location] ? (
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path></svg>
-                  ) : (
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                  )}
-                </button>
-              </div>
-
-              {openCategories[location] && (
-                <ul className="space-y-3 text-lg text-gray-500">
-                  {items.map((item, index) => {
-                    const optionalActivityDetailKey = `${location}-${index}`;
-                    const isOptionalDetailOpen = openOptionalActivityDetails[optionalActivityDetailKey];
                     return (
-                      <li key={index} className="flex flex-col items-start p-4 rounded-lg bg-gray-50">
-                        <div className="flex items-center w-full mb-2">
-                          <span className="text-2xl mr-3">💡</span>
-                          <div className="flex-grow">
-                            <strong>{item.notes}</strong><br />
-                            <span dangerouslySetInnerHTML={{ __html: item.text }} />
-                          </div>
-                          <span className="text-sm ml-2">(אופציונלי)</span>
+                      <div
+                        key={index}
+                        className="bg-white p-8 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer border-t-4 border-green-500"
+                        onClick={() => toggleDay(index)}
+                      >
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-3xl font-semibold text-gray-800 flex items-center">
+                            <span className="text-green-600 mr-3">📅</span>
+                            {day.date}: {day.description}
+                          </h3>
+                          <button className="text-green-500 hover:text-green-700 transition-colors duration-300">
+                            {openDay === index ? (
+                              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path></svg>
+                            ) : (
+                              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                            )}
+                          </button>
                         </div>
-                        {item.link && (
-                          <a
-                            href={item.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center px-4 py-2 bg-green-500 text-white text-sm font-semibold rounded-full hover:bg-green-600 transition-colors duration-300 shadow-md mt-2" // Changed to green shades
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-map-pin mr-2"><path d="M12 18.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M12 22v-3.5"/><path d="M12 11.5V2"/><path d="M19 12h3"/><path d="M2 12h3"/><path d="M12 2a7 7 0 1 0 7 7"/></svg>
-                            נווט
-                          </a>
-                        )}
 
-                        <div className="w-full mt-4 border-t border-gray-200 pt-4">
-                          <div
-                            className="flex justify-between items-center cursor-pointer"
-                            onClick={() => toggleOptionalActivityDetail(location, index)}
-                          >
-                            <h4 className="text-base font-medium text-gray-700 flex items-center">
-                              <span className="text-xl mr-2">📝</span>
-                              הערות ותמונות
-                            </h4>
-                            <button className="text-gray-500 hover:text-gray-700 transition-colors duration-300">
-                              {isOptionalDetailOpen ? (
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path></svg>
-                              ) : (
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                              )}
-                            </button>
-                          </div>
-
-                          {isOptionalDetailOpen && (
-                            <div className="mt-4">
-                              <label htmlFor={`optional-notes-${location}-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
-                                הערות:
-                              </label>
-                              <textarea
-                                id={`optional-notes-${location}-${index}`}
-                                defaultValue={item.notes || ''} // Use defaultValue for initial, non-controlled state
-                                className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-green-500 focus:border-green-500" // Changed to green shades
-                                rows="3"
-                                placeholder="הערות לפעילות זו (נשמרות בדפדפן)"
-                              ></textarea>
-                              <p className="text-xs text-green-500 mt-1"> {/* Changed to green-500 */}
-                                *הערות אלו נשמרות באופן מקומי בדפדפן.
-                              </p>
-
-                              <div className="mt-4">
-                                <label htmlFor={`optional-image-upload-${location}-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
-                                  העלאת תמונה/קובץ:
-                                </label>
-                                <input
-                                  type="file"
-                                  id={`optional-image-upload-${location}-${index}`}
-                                  accept="image/*"
-                                  onChange={(e) => handleOptionalImageUpload(location, index, e)}
-                                  className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100" // Changed to green shades
-                                />
-                                {optionalActivityImages[`${location}-${index}`] && (
-                                  <div className="mt-2">
-                                    <img
-                                      src={optionalActivityImages[`${location}-${index}`]}
-                                      alt="Uploaded preview"
-                                      className="mt-2 max-w-full h-auto rounded-lg shadow-md"
-                                      style={{ maxWidth: '200px' }}
-                                    />
-                                    <p className="text-xs text-green-500 mt-1"> {/* Changed to green-500 */}
-                                      *התמונה נשמרת באופן מקומי בדפדפן.
-                                    </p>
+                        {openDay === index && (
+                          <div className="mt-6 border-t pt-6 border-gray-200">
+                            <ul className="space-y-4 text-lg text-gray-700">
+                              {isCarPickupDay && (
+                                <li className="flex items-start text-green-700 font-medium">
+                                  <span className="text-2xl mr-3">🚗</span>
+                                  <div>
+                                    <strong>איסוף רכב:</strong> {carRental.name} ב-{carRental.pickup.location} בשעה {carRental.pickup.time}
                                   </div>
+                                </li>
+                              )}
+                              {isCarDropoffDay && (
+                                <li className="flex items-start text-red-700 font-medium">
+                                  <span className="text-2xl mr-3">🚗</span>
+                                  <div>
+                                    <strong>החזרת רכב:</strong> {carRental.name} ב-{carRental.dropoff.location} בשעה {carRental.dropoff.time}
+                                  </div>
+                                </li>
+                              )}
+                              {day.activities.map((activity, activityIdx) => {
+                                const activityDetailKey = `${index}-${activityIdx}`;
+                                const isDetailOpen = openActivityDetails[activityDetailKey];
+                                return (
+                                  <li key={activityIdx} className={`flex flex-col items-start p-4 rounded-lg ${activity.type === 'optional' ? 'bg-gray-50 text-gray-500' : 'bg-green-50 text-gray-700'}`}>
+                                    <div className="flex items-center w-full mb-2">
+                                      <span className="text-2xl mr-3">
+                                        {activity.type === 'mandatory' ? '✅' : '💡'}
+                                      </span>
+                                      <div className="flex-grow" dangerouslySetInnerHTML={{ __html: activity.text }} />
+                                      {activity.time && <span className="font-medium mr-2"> ({activity.time})</span>}
+                                      {activity.type === 'optional' && <span className="text-sm ml-2">(אופציונלי)</span>}
+                                    </div>
+                                    {activity.link && (
+                                      <a
+                                        href={activity.link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center px-4 py-2 bg-green-500 text-white text-sm font-semibold rounded-full hover:bg-green-600 transition-colors duration-300 shadow-md mt-2"
+                                      >
+                                        🔗 נווט
+                                      </a>
+                                    )}
+
+                                    <div className="w-full mt-4 border-t border-gray-200 pt-4">
+                                      <div
+                                        className="flex justify-between items-center cursor-pointer"
+                                        onClick={() => toggleActivityDetail(index, activityIdx)}
+                                      >
+                                        <h4 className="text-base font-medium text-gray-700 flex items-center">
+                                          📝 הערות ותמונות
+                                        </h4>
+                                        <button className="text-gray-500 hover:text-gray-700 transition-colors duration-300">
+                                          {isDetailOpen ? (
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path></svg>
+                                          ) : (
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                          )}
+                                        </button>
+                                      </div>
+
+                                      {isDetailOpen && (
+                                        <div className="mt-4">
+                                          <label htmlFor={`notes-${index}-${activityIdx}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                            הערות:
+                                          </label>
+                                          <textarea
+                                            id={`notes-${index}-${activityIdx}`}
+                                            value={activityNotes[`${index}-${activityIdx}`] || ''}
+                                            onChange={(e) => handleNoteChange(index, activityIdx, e)}
+                                            className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-green-500 focus:border-green-500"
+                                            rows="3"
+                                            placeholder="הערות לפעילות זו (נשמרות בדפדפן)"
+                                          ></textarea>
+                                          <p className="text-xs text-green-500 mt-1">
+                                            *הערות אלו נשמרות באופן מקומי בדפדפן.
+                                          </p>
+
+                                          <div className="mt-4">
+                                            <label htmlFor={`image-upload-${index}-${activityIdx}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                              העלאת תמונה/קובץ:
+                                            </label>
+                                            <input
+                                              type="file"
+                                              id={`image-upload-${index}-${activityIdx}`}
+                                              accept="image/*"
+                                              onChange={(e) => handleImageUpload(index, activityIdx, e)}
+                                              className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                                            />
+                                            {activityImages[`${index}-${activityIdx}`] && (
+                                              <div className="mt-2">
+                                                <img
+                                                  src={activityImages[`${index}-${activityIdx}`]}
+                                                  alt="Uploaded preview"
+                                                  className="mt-2 max-w-full h-auto rounded-lg shadow-md"
+                                                  style={{ maxWidth: '200px' }}
+                                                />
+                                                <p className="text-xs text-green-500 mt-1">
+                                                  *התמונה נשמרת באופן מקומי בדפדפן.
+                                                </p>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                            {currentLodging && (
+                              <div className="mt-8 p-6 bg-green-50 border border-green-200 rounded-xl shadow-inner">
+                                <h4 className="text-2xl font-bold text-green-700 mb-4 flex items-center">
+                                  🏨 לינה: {currentLodging.type} ב-{currentLodging.name}
+                                </h4>
+                                <p className="text-lg text-green-800 mb-2">
+                                  <strong>כתובת:</strong> {currentLodging.address}
+                                </p>
+                                <p className="text-lg text-green-800 mb-2">
+                                  <strong>תאריכים:</strong> {currentLodging.dates}
+                                </p>
+                                <p className="text-lg text-green-800 mb-2">
+                                  <strong>אישור הזמנה:</strong> {currentLodging.confirmation}
+                                </p>
+                                {currentLodging.contact && (
+                                  <a
+                                    href={currentLodging.contact}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center text-green-600 hover:text-green-800 font-semibold transition-colors duration-300 mt-2"
+                                  >
+                                    📞 צור קשר עם הדירה
+                                  </a>
                                 )}
                               </div>
-                            </div>
-                          )}
-                        </div>
-                      </li>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
-                </ul>
-              )}
+                </div>
+              </div>
+            </section>
+          );
+        };
+
+        // Packing List Section Component
+        const PackingList = ({ packingList }) => (
+          <section id="packing-list" className="py-16 bg-gradient-to-br from-green-50 to-green-100 min-h-screen rounded-xl shadow-lg m-4">
+            <div className="container mx-auto px-4">
+              <h2 className="text-5xl font-bold text-center mb-12 text-green-700 drop-shadow-md">
+                🎒 רשימת ציוד
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {Object.entries(packingList).map(([category, items]) => (
+                  <div key={category} className="bg-white p-8 rounded-2xl shadow-xl border-t-4 border-green-500">
+                    <h3 className="text-3xl font-semibold text-gray-800 mb-6 capitalize flex items-center">
+                      <span className="text-green-600 mr-3">
+                        {category === 'clothing' && '👕'}
+                        {category === 'toiletries' && '🧴'}
+                        {category === 'food' && '🍎'}
+                        {category === 'cooking' && '🍳'}
+                        {category === 'miscellaneous' && '🎒'}
+                      </span>
+                      {category === 'clothing' && 'ביגוד'}
+                      {category === 'toiletries' && 'טואלטיקה ואישי'}
+                      {category === 'food' && 'פריטי מזון'}
+                      {category === 'cooking' && 'כלי בישול'}
+                      {category === 'miscellaneous' && 'שונות'}
+                    </h3>
+                    <ul className="space-y-3 text-lg text-gray-700">
+                      {items.map((item, index) => (
+                        <li key={index} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id={`item-${category}-${index}`}
+                            className="form-checkbox h-6 w-6 text-green-600 rounded-md border-gray-300 focus:ring-green-500"
+                          />
+                          <label htmlFor={`item-${category}-${index}`} className="ml-3 cursor-pointer">
+                            {item}
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
+          </section>
+        );
+
+        // Budget Section Component
+        const Budget = ({ budget }) => {
+          // Calculate total expenses in ILS and categorize them
+          const categorizedExpenses = {};
+          budget.expenses.forEach(exp => {
+            const amountILS = convertToILS(exp.amount, exp.currency);
+            categorizedExpenses[exp.category] = (categorizedExpenses[exp.category] || 0) + amountILS;
+          });
+
+          const totalActualExpenses = Object.values(categorizedExpenses).reduce((sum, amount) => sum + amount, 0);
+
+          return (
+            <section id="budget" className="py-16 bg-gray-100 min-h-screen rounded-xl shadow-lg m-4">
+              <div className="container mx-auto px-4">
+                <h2 className="text-5xl font-bold text-center mb-12 text-green-700 drop-shadow-md">
+                  💰 תקציב הטיול
+                </h2>
+                <div className="bg-white p-8 rounded-2xl shadow-xl border-t-4 border-green-500">
+                  <div className="flex flex-col md:flex-row items-center justify-around mb-8">
+                    <div className="text-center p-4 bg-green-50 rounded-xl shadow-inner mb-4 md:mb-0 w-full md:w-1/3">
+                      <h3 className="text-2xl font-semibold text-green-800">תקציב כולל</h3>
+                      <p className="text-4xl font-bold text-green-600">₪{budget.totalBudgetILS.toLocaleString()}</p>
+                    </div>
+                    <div className="text-center p-4 bg-green-50 rounded-xl shadow-inner w-full md:w-1/3">
+                      <h3 className="text-2xl font-semibold text-green-800">הוצאות בפועל</h3>
+                      <p className="text-4xl font-bold text-green-600">₪{totalActualExpenses.toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  <h3 className="text-3xl font-semibold text-gray-800 mb-6 text-center">התפלגות הוצאות (₪)</h3>
+                  <div className="space-y-4">
+                    {Object.entries(categorizedExpenses).map(([category, amount]) => (
+                      <div key={category} className="flex justify-between items-center bg-gray-50 p-4 rounded-lg shadow-sm">
+                        <span className="text-xl font-medium text-gray-700">{category}</span>
+                        <span className="text-xl font-bold text-green-600">₪{amount.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          );
+        };
+
+        // General Optional Activities Section Component
+        const GeneralOptionalActivities = ({ activities }) => {
+          const [optionalActivityImages, setOptionalActivityImages] = useState(() =>
+            loadFromLocalStorage('optionalActivityImages', {})
+          );
+          const [openCategories, setOpenCategories] = useState(() =>
+            loadFromLocalStorage('openCategories', {})
+          );
+          const [openOptionalActivityDetails, setOpenOptionalActivityDetails] = useState(() =>
+            loadFromLocalStorage('openOptionalActivityDetails', {})
+          );
+
+          useEffect(() => {
+            saveToLocalStorage('optionalActivityImages', optionalActivityImages);
+          }, [optionalActivityImages]);
+
+          useEffect(() => {
+            saveToLocalStorage('openCategories', openCategories);
+          }, [openCategories]);
+
+          useEffect(() => {
+            saveToLocalStorage('openOptionalActivityDetails', openOptionalActivityDetails);
+          }, [openOptionalActivityDetails]);
+
+          const handleOptionalImageUpload = (location, itemIndex, e) => {
+            const file = e.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                setOptionalActivityImages(prevImages => ({
+                  ...prevImages,
+                  [`${location}-${itemIndex}`]: reader.result
+                }));
+              };
+              reader.readAsDataURL(file);
+            }
+          };
+
+          const toggleCategory = (location) => {
+            setOpenCategories(prev => ({
+              ...prev,
+              [location]: !prev[location]
+            }));
+          };
+
+          const toggleOptionalActivityDetail = (location, itemIndex) => {
+            const key = `${location}-${itemIndex}`;
+            setOpenOptionalActivityDetails(prev => ({
+              ...prev,
+              [key]: !prev[key]
+            }));
+          };
+
+          return (
+            <section id="general-optional-activities" className="py-16 bg-gradient-to-br from-green-50 to-green-100 min-h-screen rounded-xl shadow-lg m-4">
+              <div className="container mx-auto px-4">
+                <h2 className="text-5xl font-bold text-center mb-12 text-green-700 drop-shadow-md">
+                  🧭 פעילויות אופציונליות כלליות
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {Object.entries(activities).map(([location, items]) => (
+                    <div key={location} className="bg-white p-8 rounded-2xl shadow-xl border-t-4 border-green-500">
+                      <div
+                        className="flex justify-between items-center mb-6 cursor-pointer"
+                        onClick={() => toggleCategory(location)}
+                      >
+                        <h3 className="text-3xl font-semibold text-gray-800 capitalize flex items-center">
+                          <span className="text-green-600 mr-3">📍</span>
+                          {location === 'shkoder' ? 'אזור שקודרה' : null}
+                          {location === 'durres' ? 'אזור דורס' : null}
+                          {location === 'vlore' ? 'אזור ולורה' : null}
+                          {location === 'gjirokaster' ? 'אזור ג\'ירוקסטרה' : null}
+                          {location === 'beaches' ? 'חופים מומלצים' : null}
+                          {location === 'tirana' ? 'אזור טירנה' : null}
+                        </h3>
+                        <button className="text-green-500 hover:text-green-700 transition-colors duration-300">
+                          {openCategories[location] ? (
+                            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path></svg>
+                          ) : (
+                            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                          )}
+                        </button>
+                      </div>
+
+                      {openCategories[location] && (
+                        <ul className="space-y-3 text-lg text-gray-500">
+                          {items.map((item, index) => {
+                            const optionalActivityDetailKey = `${location}-${index}`;
+                            const isOptionalDetailOpen = openOptionalActivityDetails[optionalActivityDetailKey];
+                            return (
+                              <li key={index} className="flex flex-col items-start p-4 rounded-lg bg-gray-50">
+                                <div className="flex items-center w-full mb-2">
+                                  <span className="text-2xl mr-3">💡</span>
+                                  <div className="flex-grow">
+                                    <strong>{item.notes}</strong><br />
+                                    <span dangerouslySetInnerHTML={{ __html: item.text }} />
+                                  </div>
+                                  <span className="text-sm ml-2">(אופציונלי)</span>
+                                </div>
+                                {item.link && (
+                                  <a
+                                    href={item.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center px-4 py-2 bg-green-500 text-white text-sm font-semibold rounded-full hover:bg-green-600 transition-colors duration-300 shadow-md mt-2"
+                                  >
+                                    🔗 נווט
+                                  </a>
+                                )}
+
+                                <div className="w-full mt-4 border-t border-gray-200 pt-4">
+                                  <div
+                                    className="flex justify-between items-center cursor-pointer"
+                                    onClick={() => toggleOptionalActivityDetail(location, index)}
+                                  >
+                                    <h4 className="text-base font-medium text-gray-700 flex items-center">
+                                      📝 הערות ותמונות
+                                    </h4>
+                                    <button className="text-gray-500 hover:text-gray-700 transition-colors duration-300">
+                                      {isOptionalDetailOpen ? (
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path></svg>
+                                      ) : (
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                      )}
+                                    </button>
+                                  </div>
+
+                                  {isOptionalDetailOpen && (
+                                    <div className="mt-4">
+                                      <label htmlFor={`optional-notes-${location}-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                        הערות:
+                                      </label>
+                                      <textarea
+                                        id={`optional-notes-${location}-${index}`}
+                                        defaultValue={item.notes || ''}
+                                        className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-green-500 focus:border-green-500"
+                                        rows="3"
+                                        placeholder="הערות לפעילות זו (נשמרות בדפדפן)"
+                                      ></textarea>
+                                      <p className="text-xs text-green-500 mt-1">
+                                        *הערות אלו נשמרות באופן מקומי בדפדפן.
+                                      </p>
+
+                                      <div className="mt-4">
+                                        <label htmlFor={`optional-image-upload-${location}-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                          העלאת תמונה/קובץ:
+                                        </label>
+                                        <input
+                                          type="file"
+                                          id={`optional-image-upload-${location}-${index}`}
+                                          accept="image/*"
+                                          onChange={(e) => handleOptionalImageUpload(location, index, e)}
+                                          className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                                        />
+                                        {optionalActivityImages[`${location}-${index}`] && (
+                                          <div className="mt-2">
+                                            <img
+                                              src={optionalActivityImages[`${location}-${index}`]}
+                                              alt="Uploaded preview"
+                                              className="mt-2 max-w-full h-auto rounded-lg shadow-md"
+                                              style={{ maxWidth: '200px' }}
+                                            />
+                                            <p className="text-xs text-green-500 mt-1">
+                                              *התמונה נשמרת באופן מקומי בדפדפן.
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          );
+        };
 
 
-// Currency Converter Section Component
-const CurrencyConverter = () => {
-  const [amount, setAmount] = useState(1);
-  const [fromCurrency, setFromCurrency] = useState('ALL'); // Default to ALL
-  const [toCurrency, setToCurrency] = useState('ILS');     // Default to ILS
-  const [convertedAmount, setConvertedAmount] = useState(0);
+        // Currency Converter Section Component
+        const CurrencyConverter = () => {
+          const [amount, setAmount] = useState(1);
+          const [fromCurrency, setFromCurrency] = useState('ALL');
+          const [toCurrency, setToCurrency] = useState('ILS');
+          const [convertedAmount, setConvertedAmount] = useState(0);
 
-  // Hardcoded rates for demonstration. In a real app, fetch from API.
-  const rates = {
-    ILS: {
-      EUR: 1 / exchangeRates.EUR_TO_ILS, // 1 ILS to EUR
-      ALL: 1 / exchangeRates.ALL_TO_ILS, // 1 ILS to ALL
-      ILS: 1
-    },
-    EUR: {
-      ILS: exchangeRates.EUR_TO_ILS,
-      ALL: exchangeRates.EUR_TO_ILS / exchangeRates.ALL_TO_ILS, // EUR to ALL via ILS
-      EUR: 1
-    },
-    ALL: {
-      ILS: exchangeRates.ALL_TO_ILS,
-      EUR: exchangeRates.ALL_TO_ILS / exchangeRates.EUR_TO_ILS, // ALL to EUR via ILS
-      ALL: 1
-    }
-  };
+          // Hardcoded rates for demonstration. In a real app, fetch from API.
+          const rates = {
+            ILS: {
+              EUR: 1 / exchangeRates.EUR_TO_ILS,
+              ALL: 1 / exchangeRates.ALL_TO_ILS,
+              ILS: 1
+            },
+            EUR: {
+              ILS: exchangeRates.EUR_TO_ILS,
+              ALL: exchangeRates.EUR_TO_ILS / exchangeRates.ALL_TO_ILS,
+              EUR: 1
+            },
+            ALL: {
+              ILS: exchangeRates.ALL_TO_ILS,
+              EUR: exchangeRates.ALL_TO_ILS / exchangeRates.EUR_TO_ILS,
+              ALL: 1
+            }
+          };
 
-  useEffect(() => {
-    handleConvert();
-  }, [amount, fromCurrency, toCurrency]); // Recalculate on input change
+          useEffect(() => {
+            handleConvert();
+          }, [amount, fromCurrency, toCurrency]);
 
-  const handleConvert = () => {
-    const rate = rates[fromCurrency][toCurrency];
-    setConvertedAmount((amount * rate).toFixed(2));
-  };
+          const handleConvert = () => {
+            const rate = rates[fromCurrency][toCurrency];
+            setConvertedAmount((amount * rate).toFixed(2));
+          };
 
-  return (
-    <section id="currency-converter" className="py-16 bg-gradient-to-br from-green-50 to-green-100 min-h-screen rounded-xl shadow-lg m-4"> {/* Changed to green shades */}
-      <div className="container mx-auto px-4">
-        <h2 className="text-5xl font-bold text-center mb-12 text-green-700 drop-shadow-md"> {/* Changed to green-700 */}
-          <i className="lucide lucide-dollar-sign inline-block align-middle mr-4"></i>
-          מחשבון המרת מטבע
-        </h2>
-        <div className="bg-white p-8 rounded-2xl shadow-xl border-t-4 border-green-500 max-w-lg mx-auto"> {/* Changed to green-500 */}
-          <div className="mb-6">
-            <label htmlFor="amount" className="block text-lg font-medium text-gray-700 mb-2">כמות:</label>
-            <input
-              type="number"
-              id="amount"
-              value={amount}
-              onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
-              className="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 text-lg" // Changed to green shades
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div>
-              <label htmlFor="fromCurrency" className="block text-lg font-medium text-gray-700 mb-2">ממטבע:</label>
-              <select
-                id="fromCurrency"
-                value={fromCurrency}
-                onChange={(e) => setFromCurrency(e.target.value)}
-                className="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 text-lg" // Changed to green shades
-              >
-                <option value="ILS">שקל ישראלי (ILS)</option>
-                <option value="EUR">אירו (EUR)</option>
-                <option value="ALL">לק אלבני (ALL)</option>
-              </select>
+          return (
+            <section id="currency-converter" className="py-16 bg-gradient-to-br from-green-50 to-green-100 min-h-screen rounded-xl shadow-lg m-4">
+              <div className="container mx-auto px-4">
+                <h2 className="text-5xl font-bold text-center mb-12 text-green-700 drop-shadow-md">
+                  💱 מחשבון המרת מטבע
+                </h2>
+                <div className="bg-white p-8 rounded-2xl shadow-xl border-t-4 border-green-500 max-w-lg mx-auto">
+                  <div className="mb-6">
+                    <label htmlFor="amount" className="block text-lg font-medium text-gray-700 mb-2">כמות:</label>
+                    <input
+                      type="number"
+                      id="amount"
+                      value={amount}
+                      onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                      className="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 text-lg"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                      <label htmlFor="fromCurrency" className="block text-lg font-medium text-gray-700 mb-2">ממטבע:</label>
+                      <select
+                        id="fromCurrency"
+                        value={fromCurrency}
+                        onChange={(e) => setFromCurrency(e.target.value)}
+                        className="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 text-lg"
+                      >
+                        <option value="ILS">שקל ישראלי (ILS)</option>
+                        <option value="EUR">אירו (EUR)</option>
+                        <option value="ALL">לק אלבני (ALL)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="toCurrency" className="block text-lg font-medium text-gray-700 mb-2">למטבע:</label>
+                      <select
+                        id="toCurrency"
+                        value={toCurrency}
+                        onChange={(e) => setToCurrency(e.target.value)}
+                        className="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 text-lg"
+                      >
+                        <option value="ILS">שקל ישראלי (ILS)</option>
+                        <option value="EUR">אירו (EUR)</option>
+                        <option value="ALL">לק אלבני (ALL)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="text-center mt-8 p-4 bg-green-100 rounded-xl shadow-inner">
+                    <h3 className="text-2xl font-semibold text-green-800">סכום מומר:</h3>
+                    <p className="text-4xl font-bold text-green-600">
+                      {convertedAmount} {toCurrency}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+          );
+        };
+
+        // Main App Component
+        function App() {
+          return (
+            <div className="font-inter text-right bg-gray-50" dir="rtl">
+              <Navbar />
+              <Hero title={tripData.title} dates={tripData.dates} />
+              <Itinerary itinerary={tripData.itinerary} lodging={tripData.lodging} carRental={tripData.carRental} />
+              <PackingList packingList={tripData.packingList} />
+              <Budget budget={tripData.budget} />
+              <GeneralOptionalActivities activities={tripData.generalOptionalActivities} />
+              <CurrencyConverter />
+
+              {/* Footer */}
+              <footer className="bg-green-800 text-white text-center p-6 mt-8 rounded-t-xl">
+                <p>&copy; 2023 אלבניה דפרסיה. כל הזכויות שמורות.</p>
+              </footer>
             </div>
-            <div>
-              <label htmlFor="toCurrency" className="block text-lg font-medium text-gray-700 mb-2">למטבע:</label>
-              <select
-                id="toCurrency"
-                value={toCurrency}
-                onChange={(e) => setToCurrency(e.target.value)}
-                className="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 text-lg" // Changed to green shades
-              >
-                <option value="ILS">שקל ישראלי (ILS)</option>
-                <option value="EUR">אירו (EUR)</option>
-                <option value="ALL">לק אלבני (ALL)</option>
-              </select>
-            </div>
-          </div>
-          <div className="text-center mt-8 p-4 bg-green-100 rounded-xl shadow-inner"> {/* Changed to green-100 */}
-            <h3 className="text-2xl font-semibold text-green-800">סכום מומר:</h3> {/* Changed to green-800 */}
-            <p className="text-4xl font-bold text-green-600"> {/* Changed to green-600 */}
-              {convertedAmount} {toCurrency}
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-};
+          );
+        }
 
-// Main App Component
-function App() {
-  return (
-    <div className="font-inter text-right bg-gray-50" dir="rtl"> {/* Added bg-gray-50 for overall background */}
-      <Navbar />
-      <Hero title={tripData.title} dates={tripData.dates} />
-      <Itinerary itinerary={tripData.itinerary} lodging={tripData.lodging} carRental={tripData.carRental} />
-      <PackingList packingList={tripData.packingList} />
-      <Budget budget={tripData.budget} />
-      <GeneralOptionalActivities activities={tripData.generalOptionalActivities} />
-      <CurrencyConverter />
-
-      {/* Footer */}
-      <footer className="bg-green-800 text-white text-center p-6 mt-8 rounded-t-xl"> {/* Changed to green-800 */}
-        <p>&copy; 2023 אלבניה דפרסיה. כל הזכויות שמורות.</p>
-      </footer>
-    </div>
-  );
-}
-
-export default App;
+        // Render the App component to the root div
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
