@@ -40,10 +40,10 @@
             transform: translateY(-5px);
         }
         .collapsible-header {
-            cursor: pointer;
+            /* Default styles, cursor will be set dynamically */
             transition: background-color 0.2s ease-in-out;
         }
-        .collapsible-header:hover {
+        .collapsible-header.cursor-pointer:hover {
             background-color: #f0f0f0;
         }
         .collapsible-content {
@@ -174,6 +174,18 @@
         body.edit-mode .collapsible-content-notes p.read-mode-note {
             display: none !important;
         }
+
+        /* Styles to make collapsible content always open in read mode */
+        body:not(.edit-mode) .collapsible-content {
+            max-height: 2000px !important; /* Sufficiently large to show all content */
+            overflow: visible !important;
+        }
+        body:not(.edit-mode) .collapsible-header span {
+            display: none !important; /* Hide the arrow in read mode */
+        }
+        body:not(.edit-mode) .collapsible-header {
+            cursor: default !important; /* No pointer cursor in read mode */
+        }
     </style>
 </head>
 <body class="text-right">
@@ -272,14 +284,15 @@
                 {
                     id: 'day1',
                     hebrewDate: 'יום חמישי, 28 באוגוסט',
-                    description: 'יום בטיראנה ערב בשקודר',
+                    description: 'שקודר', /* Updated description */
                     activities: [
-                        { name: 'תל אביב-יפו - טירנה', type: 'required', url: 'https://maps.google.com/?q=Tirana+International+Airport', duration: 115, notes: '', image: '' }, // 1:55 in minutes
+                        // Changed duration to 0, assuming startTime is arrival time
+                        { name: 'תל אביב-יפו - טירנה', type: 'required', url: 'https://maps.google.com/?q=Tirana+International+Airport', duration: 0, notes: '', image: '' },
                         { name: 'השכרת רכב בטירנה - VT Rentals', type: 'required', url: 'https://wa.me/355694000031', duration: 0, notes: '', image: '' },
                         { name: 'אחלה דירה בשקודר', type: 'required', url: 'https://maps.google.com/?q=Rruga+Edith+Durham+25,+Shkod%C3%ABr+4001,+Albania', duration: 0, notes: '', image: '' }
                     ],
                     travelTimes: [
-                        { distance: 61.3, hours: 1, minutes: 49 },
+                        { distance: 61.3, hours: 0, minutes: 40 }, // Changed travel time to 40 minutes
                         { distance: 0, hours: 0, minutes: 1 }
                     ],
                     lodging: {
@@ -293,7 +306,7 @@
                 {
                     id: 'day2',
                     hebrewDate: 'יום שישי, 29 באוגוסט',
-                    description: 'שישי הליכה + אומגה',
+                    description: 'לשים אוכל במקרר אומגה ומסלול טיול בצפון', /* Updated description */
                     activities: [
                         { name: 'אחלה דירה בשקודר', type: 'required', url: 'https://maps.google.com/?q=Rruga+Edith+Durham+25,+Shkod%C3%ABr+4001,+Albania', duration: 0, notes: '', image: '' },
                         { name: 'לשים אוכל במקרר', type: 'required', url: '', duration: 0, notes: '', image: '' }, // Renamed from Camping_Private Kabine
@@ -320,7 +333,7 @@
                 {
                     id: 'day3',
                     hebrewDate: 'יום שבת, 30 באוגוסט',
-                    description: 'שבת באזור טט',
+                    description: 'שבת בboge', /* Updated description */
                     activities: [
                         { name: 'North Alpine Villas', type: 'required', url: 'https://maps.google.com/?q=9MXH%2B63,+Bog%C3%AB,+Albania', duration: 0, notes: '', image: '' }
                     ],
@@ -336,7 +349,7 @@
                 {
                     id: 'day4',
                     hebrewDate: 'יום ראשון, 31 באוגוסט',
-                    description: 'אגם רכבל זיפליין',
+                    description: 'טיול באגם רכבל ליד וזיפליין שינה בדורס', /* Updated description */
                     activities: [
                         { name: 'North Alpine Villas', type: 'required', url: 'https://maps.google.com/?q=9MXH%2B63,+Bog%C3%AB,+Albania', duration: 0, notes: '', image: '' },
                         { name: 'Lake Bovilla', type: 'required', url: 'https://www.wikiloc.com/hiking-trails/lake-bovilla-gamti-mountain-lake-bovilla-34432538', duration: 0, notes: '', image: '' },
@@ -361,7 +374,7 @@
                 {
                     id: 'day5',
                     hebrewDate: 'יום שני, 1 בספטמבר',
-                    description: 'גשרים',
+                    description: 'גשרים והגעה לדירה בולורה', /* Updated description */
                     activities: [
                         { name: 'אחלה דירה בדורוס', type: 'required', url: 'https://maps.google.com/?q=8F6M%2B3CC,+Rruga+Pavaresia+2002,+Durr%C3%ABs+2002,+Albania', duration: 0, notes: '', image: '' },
                         { name: 'Bridge of Brataj', type: 'required', url: '', duration: 0, notes: '', image: '' },
@@ -386,7 +399,7 @@
                 {
                     id: 'day6',
                     hebrewDate: 'יום שלישי, 2 בספטמבר',
-                    description: 'טיול גדול בולור',
+                    description: 'טיול speedboat בולורה', /* Updated description */
                     activities: [
                         { name: 'דירה יפה מול הים', type: 'required', url: 'https://maps.google.com/?q=KALAJA,+Rr.+Aleksander+Moisiu,+vis-a-vis+plazhit,+Vlor%C3%AB+9405,+Albania', duration: 0, notes: '', image: '' },
                         { name: 'TripMe.Today Boat Tour & Boat Trips Vlore', type: 'required', url: 'https://www.tripme.today/en_GB/activity/298525/speedboat-ticket-for-grand-tour-national-park-grama-bay.', duration: 0, notes: '', image: '' },
@@ -430,7 +443,7 @@
                 {
                     id: 'day8',
                     hebrewDate: 'יום חמישי, 4 בספטמבר',
-                    description: 'אבובים ומרחצאות תרמי',
+                    description: 'טיול בקניון אוסומי', /* Updated description */
                     activities: [
                         { name: 'דירה יפה מול הים', type: 'required', url: 'https://maps.google.com/?q=KALAJA,+Rr.+Aleksander+Moisiu,+vis-a-vis+plazhit,+Vlor%C3%AB+9405,+Albania', duration: 0, notes: '', image: '' },
                         { name: 'Osumi Canyon viewing point', type: 'required', url: 'https://www.getyourguide.com/corovoda-1185185/corovoda-osumi-canyon-raftingriver-tubing-tour-1681710/', duration: 0, notes: '', image: '' },
@@ -451,7 +464,7 @@
                 {
                     id: 'day9',
                     hebrewDate: 'יום שישי, 5 בספטמבר',
-                    description: 'מקום שווה לשבת',
+                    description: 'מתארגנים לשבת ועושים מה שבא', /* Updated description */
                     activities: [
                         { name: 'דירה יפה מול הים', type: 'required', url: 'https://maps.google.com/?q=KALAJA,+Rr.+Aleksander+Moisiu,+vis-a-vis+plazhit,+Vlor%C3%AB+9405,+Albania', duration: 0, notes: '', image: '' }
                     ],
@@ -467,7 +480,7 @@
                 {
                     id: 'day10',
                     hebrewDate: 'יום שבת, 6 בספטמבר',
-                    description: '',
+                    description: 'נרגעים בשבת', /* Updated description */
                     activities: [
                         { name: 'דירה יפה מול הים', type: 'required', url: 'https://maps.google.com/?q=KALAJA,+Rr.+Aleksander+Moisiu,+vis-a-vis+plazhit,+Vlor%C3%AB+9405,+Albania', duration: 0, notes: '', image: '' }
                     ],
@@ -483,7 +496,7 @@
                 {
                     id: 'day11',
                     hebrewDate: 'יום ראשון, 7 בספטמבר',
-                    description: 'היום שחוזרים בו',
+                    description: 'היום שחוזרים בו', /* Updated description */
                     activities: [
                         { name: 'דירה יפה מול הים', type: 'required', url: 'https://maps.google.com/?q=KALAJA,+Rr.+Aleksander+Moisiu,+vis-a-vis+plazhit,+Vlor%C3%AB+9405,+Albania', duration: 0, notes: '', image: '' },
                         { name: 'השכרת רכב בטירנה - VT Rentals', type: 'required', url: 'https://wa.me/355694000031', duration: 0, notes: '', image: '' },
@@ -515,6 +528,7 @@
                 body.classList.add('edit-mode');
                 editModeToggle.textContent = 'מצב קריאה';
             } else {
+                body.classList.remove('edit-mode');
                 editModeToggle.textContent = 'מצב עריכה';
             }
 
@@ -534,6 +548,16 @@
 
             // Function to handle collapsible sections
             const setupCollapsibles = (selector, storageKeyPrefix, containerId) => {
+                // Only attach listeners in edit mode
+                if (!isEditMode) {
+                    // Remove existing listeners if any were attached in previous edit mode
+                    document.querySelectorAll(selector).forEach(header => {
+                        const oldHeader = header.cloneNode(true);
+                        header.parentNode.replaceChild(oldHeader, header);
+                    });
+                    return;
+                }
+
                 // Remove existing listeners to prevent duplicates on re-render
                 document.querySelectorAll(selector).forEach(header => {
                     const oldHeader = header.cloneNode(true);
@@ -564,6 +588,9 @@
 
             // Initialize collapsible sections based on Local Storage
             const initializeCollapsibles = (selector, storageKeyPrefix, containerId) => {
+                // Only initialize based on storage in edit mode
+                if (!isEditMode) return;
+
                 const openItems = JSON.parse(localStorage.getItem(storageKeyPrefix + 's_' + containerId)) || [];
                 document.querySelectorAll(selector).forEach(header => {
                     const content = header.nextElementSibling;
@@ -590,6 +617,7 @@
                         if (savedDay) {
                             return {
                                 ...day,
+                                description: savedDay.description !== undefined ? savedDay.description : day.description, /* Ensure description is loaded */
                                 activities: day.activities.map((activity, idx) => {
                                     const savedActivity = savedDay.activities[idx];
                                     // Ensure notes and image are loaded from saved data if available
@@ -620,15 +648,16 @@
                 let currentTimeInMinutes = parseTime(day.activities[0].startTime || "00:00"); // Start from first activity's time or 00:00
 
                 day.activities.forEach((activity, activityIndex) => {
+                    // For activities after the first one, add the duration of the previous activity
+                    // and the travel time to the current activity.
                     if (activityIndex > 0) {
-                        // Add travel time from previous segment
+                        currentTimeInMinutes += day.activities[activityIndex - 1].duration; // Add duration of previous activity
                         const travel = day.travelTimes[activityIndex - 1];
                         if (travel) {
                             currentTimeInMinutes += (travel.hours * 60) + travel.minutes;
                         }
                     }
                     activity.startTime = minutesToTime(currentTimeInMinutes);
-                    currentTimeInMinutes += activity.duration;
                 });
                 saveAppData();
                 renderItinerary(); // Re-render the specific day or entire itinerary
@@ -641,10 +670,9 @@
                     let activitiesHtml = '';
                     day.activities.forEach((activity, activityIndex) => {
                         const activityId = `${day.id}-activity${activityIndex + 1}`;
-                        // Use data directly from appData
                         const currentNotes = activity.notes;
                         const currentImage = activity.image;
-                        const currentLink = activity.url; // Use activity.url as the source of truth for links
+                        const currentLink = activity.url;
 
                         // Add travel time before each activity except the first one
                         if (activityIndex > 0) {
@@ -676,7 +704,7 @@
                                     </button>
                                 </div>
                                 <div class="collapsible-content-notes mt-2">
-                                    <textarea class="w-full p-2 border rounded-md edit-controls" placeholder="הערות אישיות..." data-day-index="${dayIndex}" data-activity-index="${activityIndex}"></textarea>
+                                    <textarea class="w-full p-2 border rounded-md edit-controls" placeholder="הערות אישיות..." data-day-index="${dayIndex}" data-activity-index="${activityIndex}">${currentNotes}</textarea>
                                     <input type="file" accept="image/*" class="w-full mt-2 edit-controls" data-day-index="${dayIndex}" data-activity-index="${activityIndex}">
                                     <div class="image-preview mt-2" data-day-index="${dayIndex}" data-activity-index="${activityIndex}">
                                         ${currentImage ? `<img src="${currentImage}" class="w-32 h-32 object-cover rounded-md mt-2">` : ''}
@@ -687,20 +715,29 @@
                         `;
                     });
 
+                    // Determine if the day content should be open (always in read mode, based on storage in edit mode)
+                    const isDayOpen = isEditMode ? (JSON.parse(localStorage.getItem('day_s_itinerary-days')) || []).includes(day.id) : true;
+                    // Determine if the lodging content should be open
+                    const isLodgingOpen = isEditMode ? (JSON.parse(localStorage.getItem('lodging_s_itinerary-days')) || []).includes(`${day.id}-lodging`) : true;
+
+                    // Determine header classes based on edit mode
+                    const headerCursorClass = isEditMode ? 'cursor-pointer' : 'cursor-default';
+                    const arrowDisplayClass = isEditMode ? '' : 'hidden'; // Tailwind's hidden class
+
                     itineraryDaysContainer.innerHTML += `
                         <div class="card p-6" id="${day.id}">
-                            <div class="collapsible-header flex justify-between items-center mb-4" data-day-id="${day.id}">
+                            <div class="collapsible-header flex justify-between items-center mb-4 ${headerCursorClass}" data-day-id="${day.id}">
                                 <h3 class="text-2xl font-semibold">${day.hebrewDate} - ${day.description}</h3>
-                                <span class="text-xl">▼</span>
+                                <span class="text-xl ${arrowDisplayClass}">${isDayOpen ? '▲' : '▼'}</span>
                             </div>
-                            <div class="collapsible-content">
+                            <div class="collapsible-content ${isDayOpen ? 'open' : ''}">
                                 ${activitiesHtml}
                                 <div class="lodging mt-6 p-4 bg-gray-50 rounded-lg">
-                                    <div class="collapsible-header flex justify-between items-center" data-lodging-id="${day.id}-lodging">
+                                    <div class="collapsible-header flex justify-between items-center ${headerCursorClass}" data-lodging-id="${day.id}-lodging">
                                         <h4 class="text-xl font-semibold">🏠 לינה: ${day.lodging.name}</h4>
-                                        <span class="text-xl">▼</span>
+                                        <span class="text-xl ${arrowDisplayClass}">${isLodgingOpen ? '▲' : '▼'}</span>
                                     </div>
-                                    <div class="collapsible-content">
+                                    <div class="collapsible-content ${isLodgingOpen ? 'open' : ''}">
                                         <p><strong>כתובת:</strong> ${day.lodging.address}</p>
                                         <p><strong>תאריכים:</strong> ${day.lodging.dates}</p>
                                         <p><strong>אישור הזמנה:</strong> ${day.lodging.confirmation}</p>
@@ -714,12 +751,16 @@
 
                 // Re-attach event listeners after rendering
                 attachItineraryEventListeners();
-                initializeCollapsibles('.collapsible-header[data-day-id]', 'day', 'itinerary-days');
-                initializeCollapsibles('.collapsible-header[data-lodging-id]', 'lodging', 'itinerary-days');
+                // Only initialize collapsibles if in edit mode
+                if (isEditMode) {
+                    initializeCollapsibles('.collapsible-header[data-day-id]', 'day', 'itinerary-days');
+                    initializeCollapsibles('.collapsible-header[data-lodging-id]', 'lodging', 'itinerary-days');
+                }
             };
 
             // Attach event listeners for itinerary section
             const attachItineraryEventListeners = () => {
+                // Only setup collapsibles if in edit mode
                 setupCollapsibles('.collapsible-header[data-day-id]', 'day', 'itinerary-days');
                 setupCollapsibles('.collapsible-header[data-lodging-id]', 'lodging', 'itinerary-days');
 
